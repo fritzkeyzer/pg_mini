@@ -1,44 +1,31 @@
 # pg_mini
 Is a command line tool and package for creating and restoring consistent partial backups for PostgreSQL.
 
-
-eg: `pg_mini export --conn="..." --table="product" --filter="order by random() limit 1000" --out="backups/mini/product"`
+eg: `pg_mini export --conn="..." --table="product" --filter="order by random() limit 10000" --out="backups/mini"`
 
 outputs:
 ```
-Table depencies:
+product (10k rows, 732kB, copy 521ms, csv 63ms)
+├── product_tag (121k rows, 3MB, copy 124ms, csv 320ms)
+├── user_saved (5k rows, 1MB, copy 33ms, csv 16ms)
+├── user_cart (0 rows, 118B, copy 1ms, csv 1ms)
+├── vendor (2k rows, 2MB, copy 39ms, csv 13ms)
+│   └── vendor_tag (17k rows, 381kB, copy 48ms, csv 43ms)
+└── website (10k rows, 4MB, copy 73ms, csv 43ms)
+    ├── website_tag (139k rows, 3MB, copy 144ms, csv 317ms)
+    ├── website_task (40k rows, 3MB, copy 127ms, csv 114ms)
+    └── website_url (11k rows, 483kB, copy 53ms, csv 31ms)
 
-product ──► vendor ───────► vendor_tag ──► tag
-     ▲                                      ▲
-     ├───── user_cart ──┬─► user            │
-     ├───── user_saved ─┘                   │
-     └───── product_tag ────────────────────┘
+tag (63k rows, 200MB, copy 348ms, csv 1.09s)
+├── product_tag (121k rows, 3MB, copy 124ms, csv 320ms)
+└── vendor_tag (17k rows, 381kB, copy 48ms, csv 43ms)
 
-Sequence: 
-product, vendor, vendor_tag, user_cart, user_saved, product_tag, tag, user
+user (5k rows, 6.2MB, copy 148ms, csv 534ms)
+├── user_saved (5k rows, 1MB, copy 33ms, csv 16ms)
+└── user_cart (0 rows, 118B, copy 1ms, csv 1ms)
 
-Copying to temp tables...
-product (1000 rows, 1s)
- ├── vendor (123 rows, 123ms)
- │    └── vendor_tag  (234 rows, 234ms)
- ├── user_cart (12 rows, 12ms)
- ├── user_saved (23 rows, 23ms)
- └── product_tag (3456 rows, 3456ms)
-tag (345 rows, 345ms)
-user (25 rows, 25ms)
-
-Exporting to CSV...
-product (1000 rows, 1MB, 1s)
- ├── vendor (123 rows, 123kB, 123ms)
- │    └── vendor_tag  (234 rows, 234kB, 234ms)
- ├── user_cart (12 rows, 12kB, 12ms)
- ├── user_saved (23 rows, 23kB, 23ms)
- └── product_tag (3456 rows, 3456kB, 3456ms)
-tag (345 rows, 345kB, 345ms)
-user (25 rows, 25kB, 25ms)
-
-Done. 
-Exported to backups/mini/product (2MB, 2s)
+2024/11/03 02:53:30 Done in 3.83s
+2024/11/03 02:53:30 Exported to backups/mini
 ```
 
 ## How it works
@@ -47,7 +34,7 @@ Steps
 - Runs queries to understand your database schema
 - Build a dependency graph of tables based on foreign key relationships (including transitive dependencies!)
 - Provided with a root table an execution sequence is calculated to traverse the tree
-- A set of queries are generated that copy data into temporary tables 
+- A set of queries are generated that copy data into temporary tables
   - In the correct sequence (starting with the root table)
   - Only including rows that are required to fulfil the foreign key relationships
 - Queries are executed within a transaction for internal consistency

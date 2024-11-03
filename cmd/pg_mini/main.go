@@ -87,4 +87,7 @@ var exportCmd = clite.Cmd{
 
 var importCmd = clite.Cmd{
 	Name: "import",
+	Func: func(ctx context.Context) error {
+		return fmt.Errorf("not implemented yet")
+	},
 }

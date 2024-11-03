@@ -32,6 +32,8 @@ type ExportCmd struct {
 //   - Queries are executed within a transaction for internal consistency
 //   - COPY from commands are used to export these temp tables to CSV
 func (c *ExportCmd) Run(ctx context.Context) error {
+	t0 := time.Now()
+
 	// Runs queries to understand your database schema
 	schema, err := queryDBSchema(ctx, c.DB)
 	if err != nil {
@@ -145,7 +147,7 @@ func (c *ExportCmd) Run(ctx context.Context) error {
 		}
 	}
 
-	log.Println("Done.")
+	log.Printf("Done in %s", prettyDuration(time.Since(t0)))
 	log.Println("Exported to", c.OutDir)
 
 	return nil
