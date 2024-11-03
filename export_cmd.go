@@ -58,14 +58,11 @@ func (c *ExportCmd) Run(ctx context.Context) error {
 
 	if c.DryRun {
 		fmt.Println()
-		fmt.Println("Dry run, not executing any queries.")
-		fmt.Println("Begin transaction, copying data into temporary tables...")
 		for _, tbl := range graph.Order {
 			for _, query := range tempCopyQueries(graph, tbl, c.Filter, c.RawQuery) {
 				fmt.Println(query)
 			}
 		}
-		fmt.Println("Commit transaction. Copying complete")
 		fmt.Println()
 		for _, tbl := range graph.Order {
 			fmt.Println(copyToCSVQuery(tbl))

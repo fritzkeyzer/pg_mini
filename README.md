@@ -1,9 +1,26 @@
 # pg_mini
 Is a command line tool and package for creating and restoring consistent partial backups for PostgreSQL.
 
-eg: `pg_mini export --conn="..." --table="product" --filter="order by random() limit 10000" --out="backups/mini"`
+## Install
+```sh
+go install github.com/fritzkeyzer/pg_mini/cmd/pg_mini@latest
+```
 
-outputs:
+## Export dry run
+Use the --dry flag to visualize the execution plan
+```shell
+pg_mini export --conn="..." --table="product" --filter="order by random() limit 10000" --dry
+```
+
+## Export example
+```shell
+go run cmd/pg_mini/main.go export \
+  --conn="postgresql://user:pass@127.0.0.1:9500/core?sslmode=disable" \
+  --table="product" 
+  --filter="where country_code='DE' order by random() limit 10000" \
+  --out="backups/mini"
+```
+Output
 ```
 product (10k rows, 732kB, copy 521ms, csv 63ms)
 ├── product_tag (121k rows, 3MB, copy 124ms, csv 320ms)
@@ -33,7 +50,7 @@ user (5k rows, 6.2MB, copy 148ms, csv 534ms)
 Steps
 - Runs queries to understand your database schema
 - Build a dependency graph of tables based on foreign key relationships (including transitive dependencies!)
-- Provided with a root table an execution sequence is calculated to traverse the tree
+- Provided with a root table an execution sequence is calculated to traverse the tree in the correct order
 - A set of queries are generated that copy data into temporary tables
   - In the correct sequence (starting with the root table)
   - Only including rows that are required to fulfil the foreign key relationships

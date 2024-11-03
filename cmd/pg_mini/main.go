@@ -64,6 +64,12 @@ var exportCmd = clite.Cmd{
 		if exportParams.RootTable == "" {
 			return fmt.Errorf("must provide a root table name")
 		}
+		if exportParams.OutDir == "" && !exportParams.DryRun {
+			return fmt.Errorf("must provide an output directory")
+		}
+		if exportParams.RawQuery != "" && exportParams.Filter != "" {
+			return fmt.Errorf("cannot provide both --raw-query and --filter")
+		}
 
 		db, err := pgx.Connect(ctx, exportParams.ConnURI)
 		if err != nil {
