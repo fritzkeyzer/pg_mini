@@ -50,7 +50,7 @@ func buildGraph(schema *Schema, rootTbl string) (*Graph, error) {
 			tbl := &Table{
 				Name: rel.FromTable,
 			}
-			
+
 			tblSchema := schema.Tables[rel.FromTable]
 			for _, col := range tblSchema.Cols {
 				if !col.Generated {
@@ -88,6 +88,12 @@ func buildGraph(schema *Schema, rootTbl string) (*Graph, error) {
 		if !slices.Contains(g.Tables[toTbl].ReferencedByTbl, fromTbl) {
 			g.Tables[toTbl].ReferencedByTbl = append(g.Tables[toTbl].ReferencedByTbl, fromTbl)
 		}
+	}
+
+	// sort the dependency and dependent table slices for stable output
+	for _, tbl := range g.Tables {
+		slices.Sort(tbl.ReferencesTbl)
+		slices.Sort(tbl.ReferencedByTbl)
 	}
 
 	// determine the correct order in which to export data
