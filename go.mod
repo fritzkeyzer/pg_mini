@@ -5,8 +5,9 @@ go 1.22
 require (
 	github.com/fatih/color v1.18.0
 	github.com/fritzkeyzer/clite v0.0.2
+	github.com/golang-cz/devslog v0.0.11
+	github.com/google/go-cmp v0.6.0
 	github.com/jackc/pgx/v5 v5.7.1
-	github.com/k0kubun/pp/v3 v3.3.0
 )
 
 require (

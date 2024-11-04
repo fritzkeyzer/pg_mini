@@ -28,7 +28,7 @@ func prettyFileSize(size int64) string {
 		}
 		fileSize /= divisor
 	}
-	return fmt.Sprintf("%.0f%s", fileSize, "TB") // For sizes larger than EB
+	return fmt.Sprintf("%.0f%s", fileSize, "TB")
 }
 
 func prettyDuration(d time.Duration) string {

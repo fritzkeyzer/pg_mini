@@ -7,77 +7,43 @@ import (
 )
 
 func tempCopyQueries(g *Graph, tbl, filter, raw string) []string {
-	selectQuery := fmt.Sprintf("SELECT * FROM %s WHERE %s", tbl, genFilter(g, tbl))
+	var selectQuery string
+	selectCols := strings.Join(g.Tables[tbl].IncludeCols, ", ")
 
 	if tbl == g.RootTbl {
-		selectQuery = fmt.Sprintf("select * from %s", tbl)
+		selectQuery = fmt.Sprintf("SELECT %s FROM %s", selectCols, tbl)
 		if filter != "" {
 			selectQuery += " " + filter
 		}
 		if raw != "" {
 			selectQuery = raw
 		}
+	} else {
+		selectQuery = fmt.Sprintf("SELECT %s FROM %s WHERE %s", selectCols, tbl, genFilter(g, tbl))
 	}
-	
+
 	queries := []string{
 		fmt.Sprintf(`CREATE TEMP TABLE %s AS (%s);`, tmpTblName(tbl), selectQuery),
 	}
 
 	var indexCols []string
 	for _, rel := range g.Relations {
-		fromIndex := slices.Index(g.Order, rel.Table)
-		toIndex := slices.Index(g.Order, rel.RefTable)
+		fromIndex := slices.Index(g.ExportOrder, rel.FromTable)
+		toIndex := slices.Index(g.ExportOrder, rel.ToTable)
 
-		if rel.RefTable == tbl && !slices.Contains(indexCols, rel.RefColumn) && fromIndex > toIndex {
-			indexCols = append(indexCols, rel.RefColumn)
+		if rel.ToTable == tbl && !slices.Contains(indexCols, rel.ToColumn) && fromIndex > toIndex {
+			indexCols = append(indexCols, rel.ToColumn)
 		}
-		if rel.Table == tbl && !slices.Contains(indexCols, rel.Column) && fromIndex < toIndex {
-			indexCols = append(indexCols, rel.Column)
+		if rel.FromTable == tbl && !slices.Contains(indexCols, rel.FromColumn) && fromIndex < toIndex {
+			indexCols = append(indexCols, rel.FromColumn)
 		}
 	}
 	if len(indexCols) > 0 {
-		queries = append(queries, fmt.Sprintf(`CREATE INDEX ON %s(%s);`, tmpTblName(tbl), strings.Join(indexCols, ",")))
+		queries = append(queries, fmt.Sprintf(`CREATE INDEX ON %s (%s);`, tmpTblName(tbl), strings.Join(indexCols, ",")))
 	}
 
 	return queries
 }
-
-//func tempCopyQueries(g *Graph, root, filter, raw string) []string {
-//	selectQuery := fmt.Sprintf("select * from %s", root)
-//	if filter != "" {
-//		selectQuery += " " + filter
-//	}
-//	if raw != "" {
-//		selectQuery = raw
-//	}
-//
-//	var queries []string
-//	for i, tbl := range g.Order {
-//		if i != 0 {
-//			selectQuery = fmt.Sprintf("SELECT * FROM %s WHERE %s", tbl, genFilter(g, tbl))
-//		}
-//
-//		queries = append(queries, fmt.Sprintf(`CREATE TEMP TABLE %s AS (%s);`, tmpTblName(tbl), selectQuery))
-//
-//		var indexCols []string
-//		for _, rel := range g.Relations {
-//			fromIndex := slices.Index(g.Order, rel.Table)
-//			toIndex := slices.Index(g.Order, rel.RefTable)
-//
-//			if rel.RefTable == tbl && !slices.Contains(indexCols, rel.RefColumn) && fromIndex > toIndex {
-//				indexCols = append(indexCols, rel.RefColumn)
-//			}
-//			if rel.Table == tbl && !slices.Contains(indexCols, rel.Column) && fromIndex < toIndex {
-//				indexCols = append(indexCols, rel.Column)
-//			}
-//		}
-//		if len(indexCols) > 0 {
-//			queries = append(queries, fmt.Sprintf(`CREATE INDEX ON %s(%s);`, tmpTblName(tbl), strings.Join(indexCols, ",")))
-//		}
-//	}
-//
-//	return queries
-//}
 
 const tmpTblPrefix = "tmp_mini_"
 
@@ -89,19 +55,19 @@ func genFilter(g *Graph, table string) string {
 	colFilters := map[string][]string{}
 
 	for _, rel := range g.Relations {
-		fromIndex := slices.Index(g.Order, rel.Table)
-		toIndex := slices.Index(g.Order, rel.RefTable)
+		fromIndex := slices.Index(g.ExportOrder, rel.FromTable)
+		toIndex := slices.Index(g.ExportOrder, rel.ToTable)
 
-		if rel.Table == table && fromIndex > toIndex {
-			column := fmt.Sprintf("%s.%s", rel.Table, rel.Column)
-			idsQ := fmt.Sprintf("SELECT %s FROM %s", rel.RefColumn, tmpTblName(rel.RefTable))
+		if rel.FromTable == table && fromIndex > toIndex {
+			column := fmt.Sprintf("%s.%s", rel.FromTable, rel.FromColumn)
+			idsQ := fmt.Sprintf("SELECT %s FROM %s", rel.ToColumn, tmpTblName(rel.ToTable))
 
 			colFilters[column] = append(colFilters[column], idsQ)
 		}
 
-		if rel.RefTable == table && fromIndex < toIndex {
-			column := fmt.Sprintf("%s.%s", rel.RefTable, rel.RefColumn)
-			idsQ := fmt.Sprintf("SELECT %s FROM %s", rel.Column, tmpTblName(rel.Table))
+		if rel.ToTable == table && fromIndex < toIndex {
+			column := fmt.Sprintf("%s.%s", rel.ToTable, rel.ToColumn)
+			idsQ := fmt.Sprintf("SELECT %s FROM %s", rel.FromColumn, tmpTblName(rel.FromTable))
 
 			colFilters[column] = append(colFilters[column], idsQ)
 		}
@@ -109,7 +75,7 @@ func genFilter(g *Graph, table string) string {
 
 	var clauses []string
 	for col, colSelects := range colFilters {
-		idInSubQuery := strings.Join(colSelects, " UNION ALL ")
+		idInSubQuery := strings.Join(colSelects, " UNION DISTINCT ")
 		clause := fmt.Sprintf("%s IN (%s)", col, idInSubQuery)
 		clauses = append(clauses, clause)
 	}

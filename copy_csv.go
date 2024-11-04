@@ -15,6 +15,14 @@ func copyToCSVQuery(tbl string) string {
 	return fmt.Sprintf("COPY %s TO STDOUT WITH CSV HEADER DELIMITER ',';", tmpTblName(tbl))
 }
 
+func truncateTblQuery(tbl string) string {
+	return fmt.Sprintf("TRUNCATE TABLE %s CASCADE;", tbl)
+}
+
+func copyFromCSVQuery(tbl string) string {
+	return fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER DELIMITER ',';", tbl)
+}
+
 type copyOutRes struct {
 	FileName string
 	Rows     int64
@@ -61,6 +69,46 @@ func copyToCSV(ctx context.Context, conn *pgx.Conn, tbl, query, dir string) (*co
 	}
 
 	return &copyOutRes{
+		FileName: fileName,
+		Rows:     copyCount.RowsAffected(),
+		Duration: duration,
+		FileSize: fileStats.Size(),
+	}, nil
+}
+
+type copyInRes struct {
+	FileName string
+	Rows     int64
+	Duration time.Duration
+	FileSize int64
+}
+
+func copyFromCSV(ctx context.Context, conn *pgx.Conn, tbl, query, dir string) (*copyInRes, error) {
+	fileName := filepath.Join(dir, tbl+".csv")
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("creating file: %w", err)
+	}
+	defer file.Close()
+
+	queryStart := time.Now()
+	copyCount, err := conn.PgConn().CopyFrom(ctx, file, query)
+	if err != nil {
+		return nil, fmt.Errorf("copying data: %w", err)
+	}
+	duration := time.Since(queryStart)
+
+	err = file.Close()
+	if err != nil {
+		return nil, fmt.Errorf("closing file: %w", err)
+	}
+
+	fileStats, err := os.Stat(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("statting file: %w", err)
+	}
+
+	return &copyInRes{
 		FileName: fileName,
 		Rows:     copyCount.RowsAffected(),
 		Duration: duration,
