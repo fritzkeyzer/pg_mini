@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
 	"path"
 	"time"
 
+	"github.com/fritzkeyzer/pg_mini/logz"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -40,7 +40,7 @@ func (i *Import) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("load graph: %w", err)
 	}
-	slog.Debug("Loaded schema from json, saved to: schema.json")
+	logz.Debug("Loaded schema from json, saved to: schema.json")
 
 	graph, err := buildGraph(schema, i.RootTable)
 	if err != nil {
@@ -50,7 +50,7 @@ func (i *Import) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("save graph: %w", err)
 	}
-	slog.Debug("Import graph calculated, saved to: import_graph.json")
+	logz.Debug("Import graph calculated, saved to: import_graph.json")
 
 	graphPrinter := &GraphPrinter{
 		g: graph,
@@ -62,7 +62,7 @@ func (i *Import) Run(ctx context.Context) error {
 	}
 
 	if i.DryRun {
-		slog.Info("Dry run, not executing queries")
+		logz.Info("Dry run, not executing queries")
 
 		fmt.Println()
 		for _, tbl := range graph.ImportOrder {
@@ -74,7 +74,7 @@ func (i *Import) Run(ctx context.Context) error {
 		}
 		fmt.Println()
 
-		slog.Info("Dry run complete")
+		logz.Info("Dry run complete")
 		return nil
 	}
 
@@ -83,18 +83,18 @@ func (i *Import) Run(ctx context.Context) error {
 	for _, tbl := range graph.ImportOrder {
 		if i.Truncate {
 			truncateQuery := truncateTblQuery(tbl)
-			slog.Debug(truncateQuery)
+			logz.Debug(truncateQuery)
 			_, err := i.DB.Exec(ctx, truncateQuery)
 			if err != nil {
 				return fmt.Errorf("truncate table: %w", err)
 			}
 			if i.Verbose || i.NoAnimations {
-				slog.Info("Truncated table: " + tbl)
+				logz.Info("Truncated table: " + tbl)
 			}
 		}
 
 		query := copyFromCSVQuery(tbl)
-		slog.Debug(query)
+		logz.Debug(query)
 
 		res, err := copyFromCSV(ctx, i.DB, tbl, query, i.OutDir)
 		if err != nil {
@@ -102,7 +102,7 @@ func (i *Import) Run(ctx context.Context) error {
 		}
 
 		if i.Verbose || i.NoAnimations {
-			slog.Info("Imported CSV: "+tbl,
+			logz.Info("Imported CSV: "+tbl,
 				"rows", prettyCount(res.Rows),
 				"duration", prettyDuration(res.Duration),
 				"file size", prettyFileSize(res.FileSize),

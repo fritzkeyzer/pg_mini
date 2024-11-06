@@ -1,53 +1,18 @@
 package pg_mini
 
 import (
-	"bytes"
 	"log/slog"
 	"reflect"
 	"testing"
 
-	"github.com/golang-cz/devslog"
+	"github.com/fritzkeyzer/pg_mini/logz"
 )
 
-//func TestMain(m *testing.M) {
-//	logger := slog.New(devslog.NewHandler(os.Stdout, &devslog.Options{
-//		HandlerOptions: &slog.HandlerOptions{
-//			Level: slog.LevelDebug,
-//		},
-//		TimeFormat:        time.Kitchen,
-//		StringIndentation: true,
-//	}))
-//
-//	slog.SetDefault(logger)
-//
-//	m.Run()
-//}
-
-func testLogger(t *testing.T) {
-	t.Helper()
-	buf := new(bytes.Buffer)
-
-	log := slog.New(devslog.NewHandler(buf, &devslog.Options{
-		HandlerOptions: &slog.HandlerOptions{
-			//AddSource: true,
-			Level: slog.LevelDebug,
-		},
-	}))
-
-	t.Cleanup(func() {
-		if !t.Failed() {
-			return
-		}
-		t.Helper()
-		t.Log("log output: \n", buf.String())
-	})
-
-	slog.SetDefault(log)
+func TestMain(m *testing.M) {
+	logz.Level = slog.LevelDebug
 }
 
 func Test_calculateExportOrder(t *testing.T) {
-	testLogger(t)
-
 	type args struct {
 		startTbl string
 		tables   map[string]*Table

@@ -8,11 +8,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/fritzkeyzer/clite"
 	"github.com/fritzkeyzer/pg_mini"
-	"github.com/golang-cz/devslog"
+	"github.com/fritzkeyzer/pg_mini/logz"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -40,26 +39,9 @@ func main() {
 	}
 
 	if err := app.Run(ctx); err != nil {
-		slog.Error(err.Error())
+		logz.Error(err, "Fatal")
 		os.Exit(1)
 	}
-}
-
-func initLogger(debug bool) {
-	level := slog.LevelInfo
-	if debug {
-		level = slog.LevelDebug
-	}
-
-	logger := slog.New(devslog.NewHandler(os.Stdout, &devslog.Options{
-		HandlerOptions: &slog.HandlerOptions{
-			Level: level,
-		},
-		TimeFormat:        time.Kitchen,
-		StringIndentation: true,
-	}))
-
-	slog.SetDefault(logger)
 }
 
 var exportParams struct {
@@ -78,6 +60,9 @@ var exportCmd = clite.Cmd{
 	Name:  "export",
 	Flags: &exportParams,
 	Func: func(ctx context.Context) error {
+		if exportParams.Verbose {
+			logz.Level = slog.LevelDebug
+		}
 		if exportParams.ConnURI == "" {
 			return fmt.Errorf("must provide a connection string")
 		}
@@ -90,8 +75,6 @@ var exportCmd = clite.Cmd{
 		if exportParams.RawQuery != "" && exportParams.Filter != "" {
 			return fmt.Errorf("cannot provide both --raw-query and --filter")
 		}
-
-		initLogger(exportParams.Verbose)
 
 		db, err := pgx.Connect(ctx, exportParams.ConnURI)
 		if err != nil {
@@ -128,14 +111,15 @@ var importCmd = clite.Cmd{
 	Name:  "import",
 	Flags: &importParams,
 	Func: func(ctx context.Context) error {
+		if exportParams.Verbose {
+			logz.Level = slog.LevelDebug
+		}
 		if importParams.ConnURI == "" {
 			return fmt.Errorf("must provide a connection string")
 		}
 		if importParams.OutDir == "" {
 			return fmt.Errorf("must provide an output directory")
 		}
-
-		initLogger(importParams.Verbose)
 
 		db, err := pgx.Connect(ctx, importParams.ConnURI)
 		if err != nil {

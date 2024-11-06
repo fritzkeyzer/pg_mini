@@ -3,11 +3,11 @@ package pg_mini
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"path"
 	"time"
 
+	"github.com/fritzkeyzer/pg_mini/logz"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -44,7 +44,7 @@ func (e *Export) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("save graph: %w", err)
 	}
-	slog.Debug("Extracted schema from database, saved to: schema.json")
+	logz.Debug("Extracted schema from database, saved to: schema.json")
 
 	// Build a dependency graph of tables based on foreign key relationships (including transitive dependencies!)
 	// Provided with a root table an execution sequence is calculated to traverse the tree
@@ -56,7 +56,7 @@ func (e *Export) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("save graph: %w", err)
 	}
-	slog.Debug("Export graph calculated, saved to: export_graph.json")
+	logz.Debug("Export graph calculated, saved to: export_graph.json")
 
 	graphPrinter := &GraphPrinter{
 		g: graph,
@@ -69,7 +69,7 @@ func (e *Export) Run(ctx context.Context) error {
 	}
 
 	if e.DryRun {
-		slog.Info("Dry run, not executing queries")
+		logz.Info("Dry run, not executing queries")
 
 		fmt.Println()
 		for _, tbl := range graph.ExportOrder {
@@ -83,7 +83,7 @@ func (e *Export) Run(ctx context.Context) error {
 		}
 		fmt.Println()
 
-		slog.Info("Dry run complete")
+		logz.Info("Dry run complete")
 		return nil
 	}
 
@@ -92,7 +92,7 @@ func (e *Export) Run(ctx context.Context) error {
 	// Only including rows that are required to fulfil the foreign key relationships
 	// run temp copy queries in transaction for consistency
 	if e.Verbose || e.NoAnimations {
-		slog.Info("Begin transaction, copying data into temporary tables...")
+		logz.Info("Begin transaction, copying data into temporary tables...")
 	}
 	tx, err := e.DB.Begin(ctx)
 	if err != nil {
@@ -107,12 +107,12 @@ func (e *Export) Run(ctx context.Context) error {
 		queries := tempCopyQueries(graph, tbl, e.Filter, e.RawQuery)
 		var rows int64
 		for _, query := range queries {
-			slog.Debug(query)
+			logz.Debug(query)
 			r, err := tx.Exec(ctx, query)
 			if err != nil {
 				return fmt.Errorf("execute query %s: %w", query, err)
 			}
-			slog.Debug(r.String())
+			logz.Debug(r.String())
 			rows += r.RowsAffected()
 		}
 
@@ -120,14 +120,14 @@ func (e *Export) Run(ctx context.Context) error {
 		graph.Tables[tbl].Rows = rows
 		graph.Tables[tbl].CopyDuration = time.Since(t0)
 		if e.NoAnimations || e.Verbose {
-			slog.Info("Copied temp table: "+tbl, "rows", prettyCount(rows),
+			logz.Info("Copied temp table: "+tbl, "rows", prettyCount(rows),
 				"duration", prettyDuration(graph.Tables[tbl].CopyDuration),
 			)
 		}
 		graphPrinter.Render()
 	}
 	if e.Verbose || e.NoAnimations {
-		slog.Info("Commit transaction. Copying complete")
+		logz.Info("Commit transaction. Copying complete")
 	}
 	err = tx.Commit(ctx)
 	if err != nil {
@@ -142,7 +142,7 @@ func (e *Export) Run(ctx context.Context) error {
 		graphPrinter.Render()
 
 		query := copyToCSVQuery(tbl)
-		slog.Debug(query)
+		logz.Debug(query)
 
 		res, err := copyToCSV(ctx, e.DB, tbl, query, e.OutDir)
 		if err != nil {
@@ -155,7 +155,7 @@ func (e *Export) Run(ctx context.Context) error {
 		graphPrinter.Render()
 
 		if e.NoAnimations || e.Verbose {
-			slog.Info("Exported table: "+tbl,
+			logz.Info("Exported table: "+tbl,
 				"file", res.FileName,
 				"rows", prettyCount(res.Rows),
 				"duration", prettyDuration(res.Duration),
@@ -164,7 +164,7 @@ func (e *Export) Run(ctx context.Context) error {
 		}
 	}
 
-	slog.Info("Export complete", "dir", e.OutDir, "total duration", prettyDuration(time.Since(t0)))
+	logz.Info("Export complete", "dir", e.OutDir, "total duration", prettyDuration(time.Since(t0)))
 
 	return nil
 }
