@@ -14,7 +14,7 @@ pg_mini export --conn="..." --table="product" --filter="order by random() limit 
 
 ## Export example
 ```shell
-go run cmd/pg_mini/main.go export \
+pg_mini export \
   --conn="postgresql://user:pass@127.0.0.1:9500/core?sslmode=disable" \
   --table="product" 
   --filter="where country_code='DE' order by random() limit 10000" \

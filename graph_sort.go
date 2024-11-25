@@ -22,7 +22,7 @@ func calculateExportOrder(tables map[string]*Table, startTable string) ([]string
 	var visit func(table string) error
 	visit = func(table string) error {
 		if temp[table] {
-			return fmt.Errorf("cycle detected at table: %s", table)
+			return nil
 		}
 		if visited[table] {
 			return nil
