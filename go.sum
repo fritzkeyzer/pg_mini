@@ -7,6 +7,8 @@ github.com/fritzkeyzer/clite v0.0.2 h1:mlv4DRJshhjFooKffcISO5suQzpupyJ/OI5Cbrckv
 github.com/fritzkeyzer/clite v0.0.2/go.mod h1:DVzYnynCC4O/Y8jtITafWXUseB1rVUnwEjrEsu0pPiw=
 github.com/fritzkeyzer/conf v1.0.5 h1:9xlcm112dHScMCIf7r0Kz1EMJrXcbqkSxE01AdTjb3Q=
 github.com/fritzkeyzer/conf v1.0.5/go.mod h1:WULFYTQLB2quUJwQuozeHPL5bc3RyjSaWJxTNyafPIA=
+github.com/go-test/deep v1.1.1 h1:0r/53hagsehfO4bzD2Pgr/+RgHqhmf+k1Bpse2cTu1U=
+github.com/go-test/deep v1.1.1/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 h1:iCEnooe7UlwOQYpKFhBabPMi4aNAfoODPEFNiAnClxo=

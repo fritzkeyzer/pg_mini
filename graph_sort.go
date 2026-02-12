@@ -70,8 +70,15 @@ func calculateExportOrder(tables map[string]*Table, startTable string) ([]string
 		return nil, err
 	}
 
-	// Process tables that needed later processing
+	// Process tables that needed later processing, sorted alphabetically for deterministic order.
+	var laterTables []string
 	for table := range needsLaterProcessing {
+		if !visited[table] {
+			laterTables = append(laterTables, table)
+		}
+	}
+	slices.Sort(laterTables)
+	for _, table := range laterTables {
 		if !visited[table] {
 			if err := visit(table); err != nil {
 				return nil, err
@@ -86,14 +93,21 @@ func calculateExportOrder(tables map[string]*Table, startTable string) ([]string
 // The resulting order ensures that all dependencies are imported before their dependants.
 func calculateImportOrder(tables map[string]*Table) ([]string, error) {
 	var result []string
-
 	isVisited := func(table string) bool {
 		return slices.Contains(result, table)
 	}
 
 	// find all tables with no dependencies (root tables)
+	// handle self-references: a table with only self-references is considered a root for import order
 	for _, table := range tables {
-		if len(table.ReferencesTbl) == 0 {
+		isRoot := true
+		for _, ref := range table.ReferencesTbl {
+			if ref != table.Name {
+				isRoot = false
+				break
+			}
+		}
+		if isRoot {
 			result = append(result, table.Name)
 		}
 	}
@@ -112,31 +126,36 @@ func calculateImportOrder(tables map[string]*Table) ([]string, error) {
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	var prevTbl *Table
 	for len(queue) > 0 {
-		// pop value
-		tbl := queue[0]
-		if tbl == prevTbl {
-			return nil, fmt.Errorf("cycle detected: %s", tbl.Name)
-		}
-		queue = queue[1:]
+		initialQueueLen := len(queue)
+		var nextQueue []*Table
 
-		// check if all the dependencies are satisfied
-		dependenciesSatisfied := true
-		for _, ref := range tbl.ReferencesTbl {
-			if !isVisited(ref) {
-				dependenciesSatisfied = false
-				break
+		for _, tbl := range queue {
+			// check if all the dependencies are satisfied (ignoring self-references)
+			dependenciesSatisfied := true
+			for _, ref := range tbl.ReferencesTbl {
+				if ref != tbl.Name && !isVisited(ref) {
+					dependenciesSatisfied = false
+					break
+				}
+			}
+
+			if dependenciesSatisfied {
+				result = append(result, tbl.Name)
+			} else {
+				nextQueue = append(nextQueue, tbl)
 			}
 		}
 
-		if dependenciesSatisfied {
-			result = append(result, tbl.Name)
-		} else {
-			// push table back into queue
-			queue = append(queue, tbl)
-			continue
+		if len(nextQueue) == initialQueueLen {
+			// No progress was made in a full pass, we have a cycle
+			var names []string
+			for _, t := range nextQueue {
+				names = append(names, t.Name)
+			}
+			return nil, fmt.Errorf("cycle detected among tables: %s", strings.Join(names, ", "))
 		}
+		queue = nextQueue
 	}
 
 	return result, nil

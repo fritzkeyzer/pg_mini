@@ -5,6 +5,7 @@ go 1.22
 require (
 	github.com/fatih/color v1.18.0
 	github.com/fritzkeyzer/clite v0.0.2
+	github.com/go-test/deep v1.1.1
 	github.com/jackc/pgx/v5 v5.7.1
 )
 

@@ -1,16 +1,9 @@
 package pg_mini
 
 import (
-	"log/slog"
 	"reflect"
 	"testing"
-
-	"github.com/fritzkeyzer/pg_mini/logz"
 )
-
-func TestMain(m *testing.M) {
-	logz.Level = slog.LevelDebug
-}
 
 func Test_calculateExportOrder(t *testing.T) {
 	type args struct {

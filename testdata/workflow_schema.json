@@ -1,0 +1,181 @@
+{
+  "Relations": [
+    {
+      "FromTable": "task",
+      "FromColumn": "workflow_id",
+      "ToTable": "workflow",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task",
+      "FromColumn": "parent_task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task",
+      "FromColumn": "task_name",
+      "ToTable": "task_config",
+      "ToColumn": "name"
+    },
+    {
+      "FromTable": "task_dependency",
+      "FromColumn": "task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task_dependency",
+      "FromColumn": "depends_on_task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    }
+  ],
+  "Tables": {
+    "schema_migrations": {
+      "Name": "schema_migrations",
+      "Cols": [
+        {
+          "Name": "version",
+          "Generated": false
+        },
+        {
+          "Name": "dirty",
+          "Generated": false
+        }
+      ]
+    },
+    "task": {
+      "Name": "task",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "workflow_id",
+          "Generated": false
+        },
+        {
+          "Name": "parent_task_id",
+          "Generated": false
+        },
+        {
+          "Name": "task_name",
+          "Generated": false
+        },
+        {
+          "Name": "global_dedup_key",
+          "Generated": false
+        },
+        {
+          "Name": "priority",
+          "Generated": false
+        },
+        {
+          "Name": "data",
+          "Generated": false
+        },
+        {
+          "Name": "status",
+          "Generated": false
+        },
+        {
+          "Name": "attempt",
+          "Generated": false
+        },
+        {
+          "Name": "error",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "started_at",
+          "Generated": false
+        },
+        {
+          "Name": "completed_at",
+          "Generated": false
+        }
+      ]
+    },
+    "task_config": {
+      "Name": "task_config",
+      "Cols": [
+        {
+          "Name": "name",
+          "Generated": false
+        },
+        {
+          "Name": "max_concurrency",
+          "Generated": false
+        },
+        {
+          "Name": "max_attempts",
+          "Generated": false
+        },
+        {
+          "Name": "retry_interval_min",
+          "Generated": false
+        },
+        {
+          "Name": "retry_interval_max",
+          "Generated": false
+        },
+        {
+          "Name": "timeout",
+          "Generated": false
+        }
+      ]
+    },
+    "task_dependency": {
+      "Name": "task_dependency",
+      "Cols": [
+        {
+          "Name": "task_id",
+          "Generated": false
+        },
+        {
+          "Name": "depends_on_task_id",
+          "Generated": false
+        }
+      ]
+    },
+    "workflow": {
+      "Name": "workflow",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "name",
+          "Generated": false
+        },
+        {
+          "Name": "label",
+          "Generated": false
+        },
+        {
+          "Name": "data",
+          "Generated": false
+        },
+        {
+          "Name": "status",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "updated_at",
+          "Generated": false
+        }
+      ]
+    }
+  }
+}

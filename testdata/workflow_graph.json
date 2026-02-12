@@ -1,0 +1,138 @@
+{
+  "RootTbl": "workflow",
+  "Tables": {
+    "task": {
+      "Name": "task",
+      "ReferencesTbl": [
+        "task",
+        "task_config",
+        "workflow"
+      ],
+      "ReferencedByTbl": [
+        "task",
+        "task_dependency"
+      ],
+      "IncludeCols": [
+        "id",
+        "workflow_id",
+        "parent_task_id",
+        "task_name",
+        "global_dedup_key",
+        "priority",
+        "data",
+        "status",
+        "attempt",
+        "error",
+        "created_at",
+        "started_at",
+        "completed_at"
+      ],
+      "Status": "",
+      "Rows": 0,
+      "CopyDuration": 0,
+      "CSVDuration": 0,
+      "CSVSize": 0
+    },
+    "task_config": {
+      "Name": "task_config",
+      "ReferencesTbl": null,
+      "ReferencedByTbl": [
+        "task"
+      ],
+      "IncludeCols": [
+        "name",
+        "max_concurrency",
+        "max_attempts",
+        "retry_interval_min",
+        "retry_interval_max",
+        "timeout"
+      ],
+      "Status": "",
+      "Rows": 0,
+      "CopyDuration": 0,
+      "CSVDuration": 0,
+      "CSVSize": 0
+    },
+    "task_dependency": {
+      "Name": "task_dependency",
+      "ReferencesTbl": [
+        "task"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "task_id",
+        "depends_on_task_id"
+      ],
+      "Status": "",
+      "Rows": 0,
+      "CopyDuration": 0,
+      "CSVDuration": 0,
+      "CSVSize": 0
+    },
+    "workflow": {
+      "Name": "workflow",
+      "ReferencesTbl": null,
+      "ReferencedByTbl": [
+        "task"
+      ],
+      "IncludeCols": [
+        "id",
+        "name",
+        "label",
+        "data",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "Status": "",
+      "Rows": 0,
+      "CopyDuration": 0,
+      "CSVDuration": 0,
+      "CSVSize": 0
+    }
+  },
+  "Relations": [
+    {
+      "FromTable": "task",
+      "FromColumn": "workflow_id",
+      "ToTable": "workflow",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task",
+      "FromColumn": "parent_task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task",
+      "FromColumn": "task_name",
+      "ToTable": "task_config",
+      "ToColumn": "name"
+    },
+    {
+      "FromTable": "task_dependency",
+      "FromColumn": "task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task_dependency",
+      "FromColumn": "depends_on_task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    }
+  ],
+  "ExportOrder": [
+    "workflow",
+    "task_config",
+    "task",
+    "task_dependency"
+  ],
+  "ImportOrder": [
+    "task_config",
+    "workflow",
+    "task",
+    "task_dependency"
+  ]
+}

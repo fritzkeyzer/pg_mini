@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const tmpTblPrefix = "tmp_mini_"
+
 func tempCopyQueries(g *Graph, tbl, filter, raw string) []string {
 	var selectQuery string
 	selectCols := strings.Join(g.Tables[tbl].IncludeCols, ", ")
@@ -45,8 +47,6 @@ func tempCopyQueries(g *Graph, tbl, filter, raw string) []string {
 	return queries
 }
 
-const tmpTblPrefix = "tmp_mini_"
-
 func tmpTblName(table string) string {
 	return fmt.Sprintf("%s%s", tmpTblPrefix, table)
 }
@@ -80,6 +80,10 @@ func genFilter(g *Graph, table string) string {
 		clauses = append(clauses, clause)
 	}
 	slices.Sort(clauses)
+
+	if len(clauses) == 0 {
+		return "TRUE"
+	}
 
 	filter := ""
 	for _, clause := range clauses {
