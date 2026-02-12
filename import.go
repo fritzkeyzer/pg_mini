@@ -3,12 +3,11 @@ package pg_mini
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path"
 	"time"
 
-	"github.com/fritzkeyzer/pg_mini/logz"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -40,7 +39,7 @@ func (i *Import) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("load graph: %w", err)
 	}
-	logz.Debug("Loaded schema from json, saved to: schema.json")
+	slog.Debug("Loaded schema from json, saved to: schema.json")
 
 	graph, err := buildGraph(schema, i.RootTable)
 	if err != nil {
@@ -50,7 +49,7 @@ func (i *Import) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("save graph: %w", err)
 	}
-	logz.Debug("Import graph calculated, saved to: import_graph.json")
+	slog.Debug("Import graph calculated, saved to: import_graph.json")
 
 	graphPrinter := &GraphPrinter{
 		g: graph,
@@ -62,7 +61,7 @@ func (i *Import) Run(ctx context.Context) error {
 	}
 
 	if i.DryRun {
-		logz.Info("Dry run, not executing queries")
+		slog.Info("Dry run, not executing queries")
 
 		fmt.Println()
 		for _, tbl := range graph.ImportOrder {
@@ -74,27 +73,27 @@ func (i *Import) Run(ctx context.Context) error {
 		}
 		fmt.Println()
 
-		logz.Info("Dry run complete")
+		slog.Info("Dry run complete")
 		return nil
 	}
 
-	log.Println("Importing...")
+	slog.Info("Importing...")
 
 	for _, tbl := range graph.ImportOrder {
 		if i.Truncate {
 			truncateQuery := truncateTblQuery(tbl)
-			logz.Debug(truncateQuery)
+			slog.Debug(truncateQuery)
 			_, err := i.DB.Exec(ctx, truncateQuery)
 			if err != nil {
 				return fmt.Errorf("truncate table: %w", err)
 			}
 			if i.Verbose || i.NoAnimations {
-				logz.Info("Truncated table: " + tbl)
+				slog.Info("Truncated table: " + tbl)
 			}
 		}
 
 		query := copyFromCSVQuery(tbl)
-		logz.Debug(query)
+		slog.Debug(query)
 
 		res, err := copyFromCSV(ctx, i.DB, tbl, query, i.OutDir)
 		if err != nil {
@@ -102,7 +101,7 @@ func (i *Import) Run(ctx context.Context) error {
 		}
 
 		if i.Verbose || i.NoAnimations {
-			logz.Info("Imported CSV: "+tbl,
+			slog.Info("Imported CSV: "+tbl,
 				"rows", prettyCount(res.Rows),
 				"duration", prettyDuration(res.Duration),
 				"file size", prettyFileSize(res.FileSize),
@@ -110,7 +109,7 @@ func (i *Import) Run(ctx context.Context) error {
 		}
 	}
 
-	log.Printf("Completed in %s\n", prettyDuration(time.Since(t0)))
+	slog.Info("Import complete", "duration", prettyDuration(time.Since(t0)))
 
 	return nil
 }

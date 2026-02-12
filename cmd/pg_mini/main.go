@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/fritzkeyzer/clite"
 	"github.com/fritzkeyzer/pg_mini"
-	"github.com/fritzkeyzer/pg_mini/logz"
 	"github.com/jackc/pgx/v5"
+	"github.com/lmittmann/tint"
+	"github.com/urfave/cli/v3"
 )
 
 func main() {
@@ -25,117 +25,128 @@ func main() {
 	go func() {
 		<-sigChan
 		fmt.Println()
-		log.Println("Aborting...")
+		slog.Info("Aborting...")
 		cancel()
 	}()
 
-	app := clite.App{
-		Name:        "pg_mini",
-		Description: "Create and restore consistent partial Postgres backups",
-		Cmds: []clite.Cmd{
-			exportCmd,
-			importCmd,
+	var logLevel slog.LevelVar
+	slog.SetDefault(slog.New(tint.NewHandler(os.Stdout, &tint.Options{Level: &logLevel, TimeFormat: time.Kitchen})))
+
+	verboseFlag := cli.BoolFlag{
+		Name:  "verbose",
+		Usage: "enable verbose/debug logging",
+	}
+
+	app := &cli.Command{
+		Name:  "pg_mini",
+		Usage: "Create and restore consistent partial Postgres backups",
+		Commands: []*cli.Command{
+			{
+				Name: "export",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "conn", Usage: "required, database connection string"},
+					&cli.StringFlag{Name: "table", Usage: "required, the top-level table you want to base this export on"},
+					&cli.StringFlag{Name: "filter", Usage: "optional where clause (raw sql)"},
+					&cli.StringFlag{Name: "raw", Usage: "use the raw query instead of the filter"},
+					&cli.StringFlag{Name: "out", Usage: "required, the directory to write the exported files to"},
+					&cli.BoolFlag{Name: "dry", Usage: "skip execution of queries"},
+					&verboseFlag,
+					&cli.BoolFlag{Name: "no-animations", Usage: "disables animations"},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					if cmd.Bool("verbose") {
+						logLevel.Set(slog.LevelDebug)
+					}
+
+					connURI := cmd.String("conn")
+					rootTable := cmd.String("table")
+					filter := cmd.String("filter")
+					rawQuery := cmd.String("raw")
+					outDir := cmd.String("out")
+					dryRun := cmd.Bool("dry")
+					noAnimations := cmd.Bool("no-animations")
+
+					if connURI == "" {
+						return fmt.Errorf("must provide a connection string")
+					}
+					if rootTable == "" {
+						return fmt.Errorf("must provide a root table name")
+					}
+					if outDir == "" && !dryRun {
+						return fmt.Errorf("must provide an output directory")
+					}
+					if rawQuery != "" && filter != "" {
+						return fmt.Errorf("cannot provide both --raw and --filter")
+					}
+
+					db, err := pgx.Connect(ctx, connURI)
+					if err != nil {
+						return fmt.Errorf("connecting to database: %w", err)
+					}
+
+					export := &pg_mini.Export{
+						DB:           db,
+						RootTable:    rootTable,
+						Filter:       filter,
+						RawQuery:     rawQuery,
+						OutDir:       outDir,
+						DryRun:       dryRun,
+						Verbose:      cmd.Bool("verbose"),
+						NoAnimations: noAnimations,
+					}
+
+					return export.Run(ctx)
+				},
+			},
+			{
+				Name: "import",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "conn", Usage: "required, database connection string"},
+					&cli.StringFlag{Name: "table", Usage: "required, the top-level table used for the export"},
+					&cli.BoolFlag{Name: "truncate", Usage: "truncate the target table before importing"},
+					&cli.StringFlag{Name: "out", Usage: "required, the directory to read the exported files from"},
+					&cli.BoolFlag{Name: "dry", Usage: "skip execution of queries"},
+					&verboseFlag,
+					&cli.BoolFlag{Name: "no-animations", Usage: "disables animations"},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					if cmd.Bool("verbose") {
+						logLevel.Set(slog.LevelDebug)
+					}
+
+					connURI := cmd.String("conn")
+					outDir := cmd.String("out")
+
+					if connURI == "" {
+						return fmt.Errorf("must provide a connection string")
+					}
+					if outDir == "" {
+						return fmt.Errorf("must provide an output directory")
+					}
+
+					db, err := pgx.Connect(ctx, connURI)
+					if err != nil {
+						return fmt.Errorf("connecting to database: %w", err)
+					}
+
+					importCmd := &pg_mini.Import{
+						DB:           db,
+						RootTable:    cmd.String("table"),
+						Truncate:     cmd.Bool("truncate"),
+						OutDir:       outDir,
+						DryRun:       cmd.Bool("dry"),
+						Verbose:      cmd.Bool("verbose"),
+						NoAnimations: cmd.Bool("no-animations"),
+					}
+
+					return importCmd.Run(ctx)
+				},
+			},
 		},
 	}
 
-	if err := app.Run(ctx); err != nil {
-		logz.Error(err, "Fatal")
+	if err := app.Run(ctx, os.Args); err != nil {
+		slog.Error("Fatal", "error", err)
 		os.Exit(1)
 	}
-}
-
-var exportParams struct {
-	ConnURI   string `flag:"--conn" comment:"required, database connection string"`
-	RootTable string `flag:"--table" comment:"required, the top-level table you want to base this export on"`
-	Filter    string `flag:"--filter" comment:"optional where clause (raw sql), eg: country_code = 'DE' order by random() limit 10000"`
-	RawQuery  string `flag:"--raw" comment:"use the raw query instead of the filter, allows for more advanced queries"`
-	OutDir    string `flag:"--out" comment:"required, the directory to write the exported files to"`
-
-	DryRun       bool `flag:"--dry" comment:"skip execution of queries"`
-	Verbose      bool `flag:"--verbose"`
-	NoAnimations bool `flag:"--no-animations" comment:"disables animations"`
-}
-
-var exportCmd = clite.Cmd{
-	Name:  "export",
-	Flags: &exportParams,
-	Func: func(ctx context.Context) error {
-		if exportParams.Verbose {
-			logz.Level = slog.LevelDebug
-		}
-		if exportParams.ConnURI == "" {
-			return fmt.Errorf("must provide a connection string")
-		}
-		if exportParams.RootTable == "" {
-			return fmt.Errorf("must provide a root table name")
-		}
-		if exportParams.OutDir == "" && !exportParams.DryRun {
-			return fmt.Errorf("must provide an output directory")
-		}
-		if exportParams.RawQuery != "" && exportParams.Filter != "" {
-			return fmt.Errorf("cannot provide both --raw-query and --filter")
-		}
-
-		db, err := pgx.Connect(ctx, exportParams.ConnURI)
-		if err != nil {
-			return fmt.Errorf("connecting to database: %w", err)
-		}
-
-		export := &pg_mini.Export{
-			DB:           db,
-			RootTable:    exportParams.RootTable,
-			Filter:       exportParams.Filter,
-			RawQuery:     exportParams.RawQuery,
-			OutDir:       exportParams.OutDir,
-			DryRun:       exportParams.DryRun,
-			Verbose:      exportParams.Verbose,
-			NoAnimations: exportParams.NoAnimations,
-		}
-
-		return export.Run(ctx)
-	},
-}
-
-var importParams struct {
-	ConnURI   string `flag:"--conn" comment:"required, database connection string"`
-	RootTable string `flag:"--table" comment:"required, the top-level table used for the export"`
-	Truncate  bool   `flag:"--truncate" comment:"truncate the target table before importing"`
-	OutDir    string `flag:"--out" comment:"required, the directory to write the exported files to"`
-
-	DryRun       bool `flag:"--dry" comment:"skip execution of queries"`
-	Verbose      bool `flag:"--verbose"`
-	NoAnimations bool `flag:"--no-animations" comment:"disables animations"`
-}
-
-var importCmd = clite.Cmd{
-	Name:  "import",
-	Flags: &importParams,
-	Func: func(ctx context.Context) error {
-		if exportParams.Verbose {
-			logz.Level = slog.LevelDebug
-		}
-		if importParams.ConnURI == "" {
-			return fmt.Errorf("must provide a connection string")
-		}
-		if importParams.OutDir == "" {
-			return fmt.Errorf("must provide an output directory")
-		}
-
-		db, err := pgx.Connect(ctx, importParams.ConnURI)
-		if err != nil {
-			return fmt.Errorf("connecting to database: %w", err)
-		}
-
-		importCmd := &pg_mini.Import{
-			DB:           db,
-			RootTable:    importParams.RootTable,
-			Truncate:     importParams.Truncate,
-			OutDir:       importParams.OutDir,
-			DryRun:       importParams.DryRun,
-			Verbose:      importParams.Verbose,
-			NoAnimations: importParams.NoAnimations,
-		}
-
-		return importCmd.Run(ctx)
-	},
 }

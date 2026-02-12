@@ -75,7 +75,6 @@ func (g *Graph) print(w io.Writer, anim bool) {
 
 func (g *Graph) printTable(w io.Writer, tableName string, seen map[string]bool, level int, isLast bool, prefix string) {
 	if seen[tableName] {
-		redPrinter.Fprintf(w, "%s%s (circular ref)\n", prefix, tableName)
 		return
 	}
 
