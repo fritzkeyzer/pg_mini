@@ -104,6 +104,7 @@ func main() {
 					&cli.StringFlag{Name: "conn", Usage: "required, database connection string"},
 					&cli.StringFlag{Name: "table", Usage: "required, the top-level table used for the export"},
 					&cli.BoolFlag{Name: "truncate", Usage: "truncate the target table before importing"},
+					&cli.BoolFlag{Name: "upsert", Usage: "use INSERT ... ON CONFLICT DO UPDATE instead of plain COPY (requires primary keys)"},
 					&cli.StringFlag{Name: "out", Usage: "required, the directory to read the exported files from"},
 					&cli.BoolFlag{Name: "dry", Usage: "skip execution of queries"},
 					&verboseFlag,
@@ -117,11 +118,17 @@ func main() {
 					connURI := cmd.String("conn")
 					outDir := cmd.String("out")
 
+					truncate := cmd.Bool("truncate")
+					upsert := cmd.Bool("upsert")
+
 					if connURI == "" {
 						return fmt.Errorf("must provide a connection string")
 					}
 					if outDir == "" {
 						return fmt.Errorf("must provide an output directory")
+					}
+					if truncate && upsert {
+						return fmt.Errorf("--truncate and --upsert are mutually exclusive")
 					}
 
 					db, err := pgx.Connect(ctx, connURI)
@@ -132,7 +139,8 @@ func main() {
 					importCmd := &pg_mini.Import{
 						DB:           db,
 						RootTable:    cmd.String("table"),
-						Truncate:     cmd.Bool("truncate"),
+						Truncate:     truncate,
+						Upsert:       upsert,
 						OutDir:       outDir,
 						DryRun:       cmd.Bool("dry"),
 						Verbose:      cmd.Bool("verbose"),

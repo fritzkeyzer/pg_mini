@@ -11,6 +11,9 @@
           "Name": "dirty",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "version"
       ]
     },
     "task": {
@@ -68,6 +71,9 @@
           "Name": "completed_at",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "task_config": {
@@ -97,6 +103,9 @@
           "Name": "timeout",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "name"
       ]
     },
     "task_dependency": {
@@ -110,6 +119,10 @@
           "Name": "depends_on_task_id",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "task_id",
+        "depends_on_task_id"
       ]
     },
     "workflow": {
@@ -143,6 +156,9 @@
           "Name": "updated_at",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     }
   },

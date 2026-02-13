@@ -52,11 +52,11 @@ func (e *Export) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("build graph: %w", err)
 	}
-	err = SaveAsJSONFile(graph, path.Join(e.OutDir, "export_graph.json"))
+	err = SaveAsJSONFile(graph, path.Join(e.OutDir, "graph.json"))
 	if err != nil {
 		return fmt.Errorf("save graph: %w", err)
 	}
-	slog.Debug("Export graph calculated, saved to: export_graph.json")
+	slog.Debug("Export graph calculated, saved to: graph.json")
 
 	graphPrinter := &GraphPrinter{
 		g: graph,
@@ -70,13 +70,13 @@ func (e *Export) Run(ctx context.Context) error {
 
 	queries := generateExportQueries(graph, e.Filter, e.RawQuery)
 
+	err = SaveAsJSONFile(queries, path.Join(e.OutDir, "export_queries.json"))
+	if err != nil {
+		return fmt.Errorf("save queries: %w", err)
+	}
+
 	if e.DryRun {
 		slog.Info("Dry run, not executing queries")
-
-		err = SaveAsJSONFile(queries, path.Join(e.OutDir, "queries.json"))
-		if err != nil {
-			return fmt.Errorf("save queries: %w", err)
-		}
 
 		fmt.Println()
 		for _, tq := range queries {

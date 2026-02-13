@@ -16,8 +16,9 @@ type Schema struct {
 }
 
 type tableSchema struct {
-	Name string
-	Cols []columnSchema
+	Name           string
+	Cols           []columnSchema
+	PrimaryKeyCols []string
 }
 
 type columnSchema struct {
@@ -49,6 +50,17 @@ func queryDBSchema(ctx context.Context, db *pgx.Conn) (*Schema, error) {
 	}
 	for _, t := range tables {
 		schema.Tables[t.Name] = t
+	}
+
+	pkMap, err := getPrimaryKeys(ctx, db)
+	if err != nil {
+		return nil, fmt.Errorf("getPrimaryKeys: %w", err)
+	}
+	for tblName, pkCols := range pkMap {
+		if t, ok := schema.Tables[tblName]; ok {
+			t.PrimaryKeyCols = pkCols
+			schema.Tables[tblName] = t
+		}
 	}
 
 	return schema, nil
@@ -99,6 +111,35 @@ func getTables(ctx context.Context, conn *pgx.Conn) ([]tableSchema, error) {
 		result = append(result, *t)
 	}
 
+	return result, nil
+}
+
+func getPrimaryKeys(ctx context.Context, conn *pgx.Conn) (map[string][]string, error) {
+	query := `
+		SELECT kcu.table_name, kcu.column_name
+		FROM information_schema.table_constraints tc
+		JOIN information_schema.key_column_usage kcu
+			ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+		WHERE tc.constraint_type = 'PRIMARY KEY'
+			AND tc.table_schema = 'public'
+		ORDER BY kcu.table_name, kcu.ordinal_position;
+	`
+
+	rows, err := conn.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("querying primary keys: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string][]string)
+	for rows.Next() {
+		var tableName, colName string
+		if err := rows.Scan(&tableName, &colName); err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+		result[tableName] = append(result[tableName], colName)
+	}
 	return result, nil
 }
 
@@ -159,7 +200,9 @@ func SaveAsJSONFile(v any, file string) error {
 	}
 	defer f.Close()
 
-	err = json.NewEncoder(f).Encode(v)
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "  ")
+	err = enc.Encode(v)
 	if err != nil {
 		return fmt.Errorf("encode graph: %v", err)
 	}

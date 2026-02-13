@@ -15,6 +15,7 @@ type Import struct {
 	DB        *pgx.Conn
 	RootTable string
 	Truncate  bool
+	Upsert    bool
 	OutDir    string
 
 	DryRun       bool
@@ -41,11 +42,11 @@ func (i *Import) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("build graph: %w", err)
 	}
-	err = SaveAsJSONFile(graph, path.Join(i.OutDir, "import_graph.json"))
+	err = SaveAsJSONFile(graph, path.Join(i.OutDir, "graph.json"))
 	if err != nil {
 		return fmt.Errorf("save graph: %w", err)
 	}
-	slog.Debug("Import graph calculated, saved to: import_graph.json")
+	slog.Debug("Import graph calculated, saved to: graph.json")
 
 	graphPrinter := &GraphPrinter{
 		g: graph,
@@ -56,22 +57,38 @@ func (i *Import) Run(ctx context.Context) error {
 		graph.Print()
 	}
 
-	queries := generateImportQueries(graph)
+	queries := generateImportQueries(graph, schema)
+
+	err = SaveAsJSONFile(queries, path.Join(i.OutDir, "import_queries.json"))
+	if err != nil {
+		return fmt.Errorf("save queries: %w", err)
+	}
+
+	// Validate upsert: all tables must have primary keys
+	if i.Upsert {
+		for _, tq := range queries {
+			if tq.Upsert == "" {
+				return fmt.Errorf("upsert requested but table %s has no primary key", tq.Table)
+			}
+		}
+	}
 
 	if i.DryRun {
 		slog.Info("Dry run, not executing queries")
-
-		err = SaveAsJSONFile(queries, path.Join(i.OutDir, "queries.json"))
-		if err != nil {
-			return fmt.Errorf("save queries: %w", err)
-		}
 
 		fmt.Println()
 		for _, tq := range queries {
 			if i.Truncate {
 				fmt.Println(tq.Truncate)
 			}
-			fmt.Println(tq.CopyFromCSV)
+			if i.Upsert {
+				fmt.Println(tq.CreateTemp)
+				fmt.Println(tq.CopyTemp)
+				fmt.Println(tq.Upsert)
+				fmt.Println(tq.DropTemp)
+			} else {
+				fmt.Println(tq.Copy)
+			}
 		}
 		fmt.Println()
 
@@ -93,19 +110,57 @@ func (i *Import) Run(ctx context.Context) error {
 			}
 		}
 
-		slog.Debug(tq.CopyFromCSV)
+		if i.Upsert {
+			// Create temp table
+			slog.Debug(tq.CreateTemp)
+			_, err := i.DB.Exec(ctx, tq.CreateTemp)
+			if err != nil {
+				return fmt.Errorf("create temp table for %s: %w", tq.Table, err)
+			}
 
-		res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.CopyFromCSV, i.OutDir)
-		if err != nil {
-			return fmt.Errorf("copy from csv: %w", err)
-		}
+			// COPY into temp table
+			slog.Debug(tq.CopyTemp)
+			res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.CopyTemp, i.OutDir)
+			if err != nil {
+				return fmt.Errorf("copy from csv into temp table: %w", err)
+			}
 
-		if i.Verbose || i.NoAnimations {
-			slog.Info("Imported CSV: "+tq.Table,
-				"rows", prettyCount(res.Rows),
-				"duration", prettyDuration(res.Duration),
-				"file size", prettyFileSize(res.FileSize),
-			)
+			// Upsert from temp into target
+			slog.Debug(tq.Upsert)
+			_, err = i.DB.Exec(ctx, tq.Upsert)
+			if err != nil {
+				return fmt.Errorf("upsert from temp table for %s: %w", tq.Table, err)
+			}
+
+			// Drop temp table
+			slog.Debug(tq.DropTemp)
+			_, err = i.DB.Exec(ctx, tq.DropTemp)
+			if err != nil {
+				return fmt.Errorf("drop temp table for %s: %w", tq.Table, err)
+			}
+
+			if i.Verbose || i.NoAnimations {
+				slog.Info("Upserted: "+tq.Table,
+					"rows", prettyCount(res.Rows),
+					"duration", prettyDuration(res.Duration),
+					"file size", prettyFileSize(res.FileSize),
+				)
+			}
+		} else {
+			slog.Debug(tq.Copy)
+
+			res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.Copy, i.OutDir)
+			if err != nil {
+				return fmt.Errorf("copy from csv: %w", err)
+			}
+
+			if i.Verbose || i.NoAnimations {
+				slog.Info("Imported CSV: "+tq.Table,
+					"rows", prettyCount(res.Rows),
+					"duration", prettyDuration(res.Duration),
+					"file size", prettyFileSize(res.FileSize),
+				)
+			}
 		}
 	}
 

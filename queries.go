@@ -13,9 +13,15 @@ type ExportTableQueries struct {
 }
 
 type ImportTableQueries struct {
-	Table       string
-	Truncate    string // TRUNCATE TABLE X CASCADE
-	CopyFromCSV string // COPY X FROM STDIN ...
+	Table    string
+	Truncate string // TRUNCATE TABLE X CASCADE
+	Copy     string // COPY X FROM STDIN ...
+
+	// Upsert mode: COPY into temp table, then INSERT ... ON CONFLICT
+	CreateTemp string // CREATE TEMP TABLE tmp_import_X (LIKE X INCLUDING ALL)
+	CopyTemp   string // COPY tmp_import_X FROM STDIN WITH CSV HEADER ...
+	Upsert     string // INSERT INTO X SELECT * FROM tmp ON CONFLICT (...) DO UPDATE SET ...
+	DropTemp   string // DROP TABLE IF EXISTS tmp_import_X
 }
 
 func generateExportQueries(g *Graph, filter, raw string) []ExportTableQueries {
@@ -66,15 +72,60 @@ func generateExportQueries(g *Graph, filter, raw string) []ExportTableQueries {
 	return result
 }
 
-func generateImportQueries(g *Graph) []ImportTableQueries {
+func generateImportQueries(g *Graph, schema *Schema) []ImportTableQueries {
 	var result []ImportTableQueries
 
 	for _, tbl := range g.ImportOrder {
-		result = append(result, ImportTableQueries{
-			Table:       tbl,
-			Truncate:    fmt.Sprintf("TRUNCATE TABLE %s CASCADE;", tbl),
-			CopyFromCSV: fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER DELIMITER ',';", tbl),
-		})
+		tblSchema := schema.Tables[tbl]
+
+		// Determine non-generated columns for COPY
+		var includeCols []string
+		for _, col := range tblSchema.Cols {
+			if !col.Generated {
+				includeCols = append(includeCols, col.Name)
+			}
+		}
+		colList := strings.Join(includeCols, ", ")
+
+		tmpName := "tmp_import_" + tbl
+
+		tq := ImportTableQueries{
+			Table:        tbl,
+			Truncate:     fmt.Sprintf("TRUNCATE TABLE %s CASCADE;", tbl),
+			Copy:  fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tbl, colList),
+			CreateTemp: fmt.Sprintf("CREATE TEMP TABLE %s (LIKE %s INCLUDING ALL);", tmpName, tbl),
+			CopyTemp: fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tmpName, colList),
+			DropTemp:   fmt.Sprintf("DROP TABLE IF EXISTS %s;", tmpName),
+		}
+
+		// Generate upsert query if table has primary key
+		if len(tblSchema.PrimaryKeyCols) > 0 {
+			pkCols := strings.Join(tblSchema.PrimaryKeyCols, ", ")
+
+			// Build SET clause for non-PK, non-generated columns
+			var setClauses []string
+			pkSet := make(map[string]bool)
+			for _, pk := range tblSchema.PrimaryKeyCols {
+				pkSet[pk] = true
+			}
+			for _, col := range tblSchema.Cols {
+				if !col.Generated && !pkSet[col.Name] {
+					setClauses = append(setClauses, fmt.Sprintf("%s = EXCLUDED.%s", col.Name, col.Name))
+				}
+			}
+
+			doClause := "DO NOTHING"
+			if len(setClauses) > 0 {
+				doClause = "DO UPDATE SET " + strings.Join(setClauses, ", ")
+			}
+
+			tq.Upsert = fmt.Sprintf(
+				"INSERT INTO %s (%s) SELECT %s FROM %s ON CONFLICT (%s) %s;",
+				tbl, colList, colList, tmpName, pkCols, doClause,
+			)
+		}
+
+		result = append(result, tq)
 	}
 
 	return result

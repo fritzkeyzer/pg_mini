@@ -2,61 +2,109 @@
   {
     "Table": "company",
     "Truncate": "TRUNCATE TABLE company CASCADE;",
-    "CopyFromCSV": "COPY company FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY company (id, name, created_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_company (LIKE company INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_company (id, name, created_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO company (id, name, created_at) SELECT id, name, created_at FROM tmp_import_company ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, created_at = EXCLUDED.created_at;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_company;"
   },
   {
     "Table": "tag",
     "Truncate": "TRUNCATE TABLE tag CASCADE;",
-    "CopyFromCSV": "COPY tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY tag (id, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_tag (LIKE tag INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_tag (id, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO tag (id, name) SELECT id, name FROM tmp_import_tag ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_tag;"
   },
   {
     "Table": "company_tag",
     "Truncate": "TRUNCATE TABLE company_tag CASCADE;",
-    "CopyFromCSV": "COPY company_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY company_tag (company_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_company_tag (LIKE company_tag INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_company_tag (company_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO company_tag (company_id, tag_id) SELECT company_id, tag_id FROM tmp_import_company_tag ON CONFLICT (company_id, tag_id) DO NOTHING;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_company_tag;"
   },
   {
     "Table": "legal_entity",
     "Truncate": "TRUNCATE TABLE legal_entity CASCADE;",
-    "CopyFromCSV": "COPY legal_entity FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY legal_entity (id, company_id, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_legal_entity (LIKE legal_entity INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_legal_entity (id, company_id, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO legal_entity (id, company_id, name) SELECT id, company_id, name FROM tmp_import_legal_entity ON CONFLICT (id) DO UPDATE SET company_id = EXCLUDED.company_id, name = EXCLUDED.name;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_legal_entity;"
   },
   {
     "Table": "legal_entity_financial",
     "Truncate": "TRUNCATE TABLE legal_entity_financial CASCADE;",
-    "CopyFromCSV": "COPY legal_entity_financial FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY legal_entity_financial (id, legal_entity_id, revenue) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_legal_entity_financial (LIKE legal_entity_financial INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_legal_entity_financial (id, legal_entity_id, revenue) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO legal_entity_financial (id, legal_entity_id, revenue) SELECT id, legal_entity_id, revenue FROM tmp_import_legal_entity_financial ON CONFLICT (id) DO UPDATE SET legal_entity_id = EXCLUDED.legal_entity_id, revenue = EXCLUDED.revenue;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_legal_entity_financial;"
   },
   {
     "Table": "legal_entity_tag",
     "Truncate": "TRUNCATE TABLE legal_entity_tag CASCADE;",
-    "CopyFromCSV": "COPY legal_entity_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY legal_entity_tag (legal_entity_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_legal_entity_tag (LIKE legal_entity_tag INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_legal_entity_tag (legal_entity_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO legal_entity_tag (legal_entity_id, tag_id) SELECT legal_entity_id, tag_id FROM tmp_import_legal_entity_tag ON CONFLICT (legal_entity_id, tag_id) DO NOTHING;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_legal_entity_tag;"
   },
   {
     "Table": "profile",
     "Truncate": "TRUNCATE TABLE profile CASCADE;",
-    "CopyFromCSV": "COPY profile FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY profile (id, company_id, bio) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_profile (LIKE profile INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_profile (id, company_id, bio) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO profile (id, company_id, bio) SELECT id, company_id, bio FROM tmp_import_profile ON CONFLICT (id) DO UPDATE SET company_id = EXCLUDED.company_id, bio = EXCLUDED.bio;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_profile;"
   },
   {
     "Table": "profile_ftes",
     "Truncate": "TRUNCATE TABLE profile_ftes CASCADE;",
-    "CopyFromCSV": "COPY profile_ftes FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY profile_ftes (id, profile_id, count) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_profile_ftes (LIKE profile_ftes INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_profile_ftes (id, profile_id, count) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO profile_ftes (id, profile_id, count) SELECT id, profile_id, count FROM tmp_import_profile_ftes ON CONFLICT (id) DO UPDATE SET profile_id = EXCLUDED.profile_id, count = EXCLUDED.count;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_profile_ftes;"
   },
   {
     "Table": "profile_tag",
     "Truncate": "TRUNCATE TABLE profile_tag CASCADE;",
-    "CopyFromCSV": "COPY profile_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY profile_tag (profile_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_profile_tag (LIKE profile_tag INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_profile_tag (profile_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO profile_tag (profile_id, tag_id) SELECT profile_id, tag_id FROM tmp_import_profile_tag ON CONFLICT (profile_id, tag_id) DO NOTHING;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_profile_tag;"
   },
   {
     "Table": "website",
     "Truncate": "TRUNCATE TABLE website CASCADE;",
-    "CopyFromCSV": "COPY website FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY website (id, company_id, url) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_website (LIKE website INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_website (id, company_id, url) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO website (id, company_id, url) SELECT id, company_id, url FROM tmp_import_website ON CONFLICT (id) DO UPDATE SET company_id = EXCLUDED.company_id, url = EXCLUDED.url;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_website;"
   },
   {
     "Table": "website_description",
     "Truncate": "TRUNCATE TABLE website_description CASCADE;",
-    "CopyFromCSV": "COPY website_description FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY website_description (id, website_id, description) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_website_description (LIKE website_description INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_website_description (id, website_id, description) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO website_description (id, website_id, description) SELECT id, website_id, description FROM tmp_import_website_description ON CONFLICT (id) DO UPDATE SET website_id = EXCLUDED.website_id, description = EXCLUDED.description;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_website_description;"
   },
   {
     "Table": "website_tag",
     "Truncate": "TRUNCATE TABLE website_tag CASCADE;",
-    "CopyFromCSV": "COPY website_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY website_tag (website_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_website_tag (LIKE website_tag INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_website_tag (website_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO website_tag (website_id, tag_id) SELECT website_id, tag_id FROM tmp_import_website_tag ON CONFLICT (website_id, tag_id) DO NOTHING;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_website_tag;"
   }
 ]

@@ -103,7 +103,7 @@ func Test_generateImportQueries(t *testing.T) {
 				t.Fatalf("buildGraph: %v", err)
 			}
 
-			queries := generateImportQueries(graph)
+			queries := generateImportQueries(graph, schema)
 
 			goldenFile := filepath.Join(tt.dir, "import_queries.json")
 

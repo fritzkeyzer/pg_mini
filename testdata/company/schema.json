@@ -15,6 +15,9 @@
           "Name": "created_at",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "company_tag": {
@@ -28,6 +31,10 @@
           "Name": "tag_id",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "company_id",
+        "tag_id"
       ]
     },
     "tag": {
@@ -41,6 +48,9 @@
           "Name": "name",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "website": {
@@ -58,6 +68,9 @@
           "Name": "url",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "website_description": {
@@ -75,6 +88,9 @@
           "Name": "description",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "website_tag": {
@@ -88,6 +104,10 @@
           "Name": "tag_id",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "website_id",
+        "tag_id"
       ]
     },
     "profile": {
@@ -105,6 +125,9 @@
           "Name": "bio",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "profile_ftes": {
@@ -122,6 +145,9 @@
           "Name": "count",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "profile_tag": {
@@ -135,6 +161,10 @@
           "Name": "tag_id",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "profile_id",
+        "tag_id"
       ]
     },
     "legal_entity": {
@@ -152,6 +182,9 @@
           "Name": "name",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "legal_entity_financial": {
@@ -169,6 +202,9 @@
           "Name": "revenue",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "id"
       ]
     },
     "legal_entity_tag": {
@@ -182,6 +218,10 @@
           "Name": "tag_id",
           "Generated": false
         }
+      ],
+      "PrimaryKeyCols": [
+        "legal_entity_id",
+        "tag_id"
       ]
     }
   },

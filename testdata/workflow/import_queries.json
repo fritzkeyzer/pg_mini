@@ -2,21 +2,37 @@
   {
     "Table": "task_config",
     "Truncate": "TRUNCATE TABLE task_config CASCADE;",
-    "CopyFromCSV": "COPY task_config FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY task_config (name, max_concurrency, max_attempts, retry_interval_min, retry_interval_max, timeout) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_task_config (LIKE task_config INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_task_config (name, max_concurrency, max_attempts, retry_interval_min, retry_interval_max, timeout) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO task_config (name, max_concurrency, max_attempts, retry_interval_min, retry_interval_max, timeout) SELECT name, max_concurrency, max_attempts, retry_interval_min, retry_interval_max, timeout FROM tmp_import_task_config ON CONFLICT (name) DO UPDATE SET max_concurrency = EXCLUDED.max_concurrency, max_attempts = EXCLUDED.max_attempts, retry_interval_min = EXCLUDED.retry_interval_min, retry_interval_max = EXCLUDED.retry_interval_max, timeout = EXCLUDED.timeout;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_task_config;"
   },
   {
     "Table": "workflow",
     "Truncate": "TRUNCATE TABLE workflow CASCADE;",
-    "CopyFromCSV": "COPY workflow FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY workflow (id, name, label, data, status, created_at, updated_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_workflow (LIKE workflow INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_workflow (id, name, label, data, status, created_at, updated_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO workflow (id, name, label, data, status, created_at, updated_at) SELECT id, name, label, data, status, created_at, updated_at FROM tmp_import_workflow ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, label = EXCLUDED.label, data = EXCLUDED.data, status = EXCLUDED.status, created_at = EXCLUDED.created_at, updated_at = EXCLUDED.updated_at;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_workflow;"
   },
   {
     "Table": "task",
     "Truncate": "TRUNCATE TABLE task CASCADE;",
-    "CopyFromCSV": "COPY task FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY task (id, workflow_id, parent_task_id, task_name, global_dedup_key, priority, data, status, attempt, error, created_at, started_at, completed_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_task (LIKE task INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_task (id, workflow_id, parent_task_id, task_name, global_dedup_key, priority, data, status, attempt, error, created_at, started_at, completed_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO task (id, workflow_id, parent_task_id, task_name, global_dedup_key, priority, data, status, attempt, error, created_at, started_at, completed_at) SELECT id, workflow_id, parent_task_id, task_name, global_dedup_key, priority, data, status, attempt, error, created_at, started_at, completed_at FROM tmp_import_task ON CONFLICT (id) DO UPDATE SET workflow_id = EXCLUDED.workflow_id, parent_task_id = EXCLUDED.parent_task_id, task_name = EXCLUDED.task_name, global_dedup_key = EXCLUDED.global_dedup_key, priority = EXCLUDED.priority, data = EXCLUDED.data, status = EXCLUDED.status, attempt = EXCLUDED.attempt, error = EXCLUDED.error, created_at = EXCLUDED.created_at, started_at = EXCLUDED.started_at, completed_at = EXCLUDED.completed_at;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_task;"
   },
   {
     "Table": "task_dependency",
     "Truncate": "TRUNCATE TABLE task_dependency CASCADE;",
-    "CopyFromCSV": "COPY task_dependency FROM STDIN WITH CSV HEADER DELIMITER ',';"
+    "Copy": "COPY task_dependency (task_id, depends_on_task_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "CreateTemp": "CREATE TEMP TABLE tmp_import_task_dependency (LIKE task_dependency INCLUDING ALL);",
+    "CopyTemp": "COPY tmp_import_task_dependency (task_id, depends_on_task_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Upsert": "INSERT INTO task_dependency (task_id, depends_on_task_id) SELECT task_id, depends_on_task_id FROM tmp_import_task_dependency ON CONFLICT (task_id, depends_on_task_id) DO NOTHING;",
+    "DropTemp": "DROP TABLE IF EXISTS tmp_import_task_dependency;"
   }
 ]
