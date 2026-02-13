@@ -6,84 +6,83 @@ import (
 	"strings"
 )
 
-// calculateExportOrder performs a topological sort, starting with a root table.
-// The resulting order ensures that all dependencies are maintained in the export.
+// calculateExportOrder determines the order in which tables should be exported,
+// starting from a root table with a user-defined filter.
+//
+// The key principle: data flows outward from the root. Downstream tables (those
+// that reference already-processed tables) are exported first, so their data can
+// be used to filter upstream lookup tables. This ensures every non-root table
+// gets a meaningful WHERE filter instead of WHERE TRUE.
+//
+// Phase 1: BFS from root following ReferencedBy edges (downstream propagation).
+// Phase 2: Add remaining upstream/lookup tables once all their FK targets are processed.
 func calculateExportOrder(tables map[string]*Table, startTable string) ([]string, error) {
+	if tables[startTable] == nil {
+		return nil, fmt.Errorf("start table not found: %s", startTable)
+	}
+
 	var result []string
+	added := make(map[string]bool)
 
-	// Track visited tables and detect cycles
-	visited := make(map[string]bool)
-	temp := make(map[string]bool) // for cycle detection
+	// Phase 1: BFS from root following ReferencedBy edges.
+	// This propagates the root filter downstream through FK relationships.
+	result = append(result, startTable)
+	added[startTable] = true
 
-	// Special handling for tables that might need to be processed later
-	// due to transitive dependencies (like tag table)
-	needsLaterProcessing := make(map[string]bool)
-
-	var visit func(table string) error
-	visit = func(table string) error {
-		if temp[table] {
-			return nil
+	queue := []string{startTable}
+	for len(queue) > 0 {
+		var nextWave []string
+		for _, tbl := range queue {
+			for _, ref := range tables[tbl].ReferencedByTbl {
+				if !added[ref] {
+					added[ref] = true
+					nextWave = append(nextWave, ref)
+				}
+			}
 		}
-		if visited[table] {
-			return nil
-		}
+		slices.Sort(nextWave)
+		result = append(result, nextWave...)
+		queue = nextWave
+	}
 
-		temp[table] = true
-
-		t := tables[table]
-		if t == nil {
-			return fmt.Errorf("table not found: %s", table)
-		}
-
-		// First, process tables this table references
-		for _, ref := range t.ReferencesTbl {
-			// Special case: if this table is referenced by others that haven't been processed yet,
-			// we might need to process it later
-			if len(tables[ref].ReferencedByTbl) > 1 {
-				needsLaterProcessing[ref] = true
+	// Phase 2: Add remaining tables (reachable only via References edges).
+	// These are upstream/lookup tables. A table is ready when all its FK targets
+	// are already processed (ignoring self-references), ensuring it can be
+	// properly filtered by the downstream data collected in phase 1.
+	for len(result) < len(tables) {
+		var wave []string
+		for name, t := range tables {
+			if added[name] {
 				continue
 			}
-			if err := visit(ref); err != nil {
-				return err
+			allRefsSatisfied := true
+			for _, ref := range t.ReferencesTbl {
+				if ref != name && !added[ref] {
+					allRefsSatisfied = false
+					break
+				}
+			}
+			if allRefsSatisfied {
+				wave = append(wave, name)
 			}
 		}
 
-		// Then add this table
-		if !visited[table] {
-			result = append(result, table)
-		}
-
-		// Then process tables that reference this table
-		for _, ref := range t.ReferencedByTbl {
-			if err := visit(ref); err != nil {
-				return err
+		if len(wave) == 0 {
+			var remaining []string
+			for name := range tables {
+				if !added[name] {
+					remaining = append(remaining, name)
+				}
 			}
+			slices.Sort(remaining)
+			return nil, fmt.Errorf("cannot determine export order for tables: %s (circular FK references prevent proper filtering from root %q)", strings.Join(remaining, ", "), startTable)
 		}
 
-		visited[table] = true
-		temp[table] = false
-		return nil
-	}
-
-	// Start traversal from the given table
-	if err := visit(startTable); err != nil {
-		return nil, err
-	}
-
-	// Process tables that needed later processing, sorted alphabetically for deterministic order.
-	var laterTables []string
-	for table := range needsLaterProcessing {
-		if !visited[table] {
-			laterTables = append(laterTables, table)
+		slices.Sort(wave)
+		for _, tbl := range wave {
+			added[tbl] = true
 		}
-	}
-	slices.Sort(laterTables)
-	for _, table := range laterTables {
-		if !visited[table] {
-			if err := visit(table); err != nil {
-				return nil, err
-			}
-		}
+		result = append(result, wave...)
 	}
 
 	return result, nil

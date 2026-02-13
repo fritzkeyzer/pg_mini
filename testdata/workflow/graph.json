@@ -105,9 +105,9 @@
   ],
   "ExportOrder": [
     "workflow",
-    "task_config",
     "task",
-    "task_dependency"
+    "task_dependency",
+    "task_config"
   ],
   "ImportOrder": [
     "task_config",
