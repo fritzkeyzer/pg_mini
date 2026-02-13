@@ -16,9 +16,10 @@ type Schema struct {
 }
 
 type tableSchema struct {
-	Name           string
-	Cols           []columnSchema
-	PrimaryKeyCols []string
+	Name              string
+	Cols              []columnSchema
+	PrimaryKeyCols    []string
+	UniqueConstraints [][]string // each entry is a list of columns forming a unique constraint
 }
 
 type columnSchema struct {
@@ -59,6 +60,17 @@ func queryDBSchema(ctx context.Context, db *pgx.Conn) (*Schema, error) {
 	for tblName, pkCols := range pkMap {
 		if t, ok := schema.Tables[tblName]; ok {
 			t.PrimaryKeyCols = pkCols
+			schema.Tables[tblName] = t
+		}
+	}
+
+	ucMap, err := getUniqueConstraints(ctx, db)
+	if err != nil {
+		return nil, fmt.Errorf("getUniqueConstraints: %w", err)
+	}
+	for tblName, ucs := range ucMap {
+		if t, ok := schema.Tables[tblName]; ok {
+			t.UniqueConstraints = ucs
 			schema.Tables[tblName] = t
 		}
 	}
@@ -139,6 +151,47 @@ func getPrimaryKeys(ctx context.Context, conn *pgx.Conn) (map[string][]string, e
 			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 		result[tableName] = append(result[tableName], colName)
+	}
+	return result, nil
+}
+
+func getUniqueConstraints(ctx context.Context, conn *pgx.Conn) (map[string][][]string, error) {
+	query := `
+		SELECT kcu.table_name, tc.constraint_name, kcu.column_name
+		FROM information_schema.table_constraints tc
+		JOIN information_schema.key_column_usage kcu
+			ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+		WHERE tc.constraint_type = 'UNIQUE'
+			AND tc.table_schema = 'public'
+		ORDER BY kcu.table_name, tc.constraint_name, kcu.ordinal_position;
+	`
+
+	rows, err := conn.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("querying unique constraints: %w", err)
+	}
+	defer rows.Close()
+
+	// Group columns by table+constraint
+	type key struct{ table, constraint string }
+	ordered := []key{}
+	cols := make(map[key][]string)
+	for rows.Next() {
+		var tableName, constraintName, colName string
+		if err := rows.Scan(&tableName, &constraintName, &colName); err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+		k := key{tableName, constraintName}
+		if _, ok := cols[k]; !ok {
+			ordered = append(ordered, k)
+		}
+		cols[k] = append(cols[k], colName)
+	}
+
+	result := make(map[string][][]string)
+	for _, k := range ordered {
+		result[k.table] = append(result[k.table], cols[k])
 	}
 	return result, nil
 }

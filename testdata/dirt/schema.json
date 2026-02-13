@@ -1,0 +1,707 @@
+{
+  "Tables": {
+    "activity_log": {
+      "Name": "activity_log",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "severity",
+          "Generated": false
+        },
+        {
+          "Name": "entity",
+          "Generated": false
+        },
+        {
+          "Name": "action",
+          "Generated": false
+        },
+        {
+          "Name": "msg",
+          "Generated": false
+        },
+        {
+          "Name": "meta",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "answer": {
+      "Name": "answer",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "report_id",
+          "Generated": false
+        },
+        {
+          "Name": "question_id",
+          "Generated": false
+        },
+        {
+          "Name": "display_order",
+          "Generated": false
+        },
+        {
+          "Name": "status",
+          "Generated": false
+        },
+        {
+          "Name": "risk_level",
+          "Generated": false
+        },
+        {
+          "Name": "key_findings",
+          "Generated": false
+        },
+        {
+          "Name": "detailed_analysis",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "updated_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "answer_research": {
+      "Name": "answer_research",
+      "Cols": [
+        {
+          "Name": "answer_id",
+          "Generated": false
+        },
+        {
+          "Name": "data",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "answer_id"
+      ]
+    },
+    "citation": {
+      "Name": "citation",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "answer_id",
+          "Generated": false
+        },
+        {
+          "Name": "source_id",
+          "Generated": false
+        },
+        {
+          "Name": "url",
+          "Generated": false
+        },
+        {
+          "Name": "page_title",
+          "Generated": false
+        },
+        {
+          "Name": "source_date",
+          "Generated": false
+        },
+        {
+          "Name": "quoted_extracts",
+          "Generated": false
+        },
+        {
+          "Name": "relevance",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "updated_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "question_config": {
+      "Name": "question_config",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "org_id",
+          "Generated": false
+        },
+        {
+          "Name": "previous_version_id",
+          "Generated": false
+        },
+        {
+          "Name": "version_number",
+          "Generated": false
+        },
+        {
+          "Name": "report_category",
+          "Generated": false
+        },
+        {
+          "Name": "question_title",
+          "Generated": false
+        },
+        {
+          "Name": "research_instructions",
+          "Generated": false
+        },
+        {
+          "Name": "risk_enabled_low",
+          "Generated": false
+        },
+        {
+          "Name": "risk_enabled_medium",
+          "Generated": false
+        },
+        {
+          "Name": "risk_enabled_high",
+          "Generated": false
+        },
+        {
+          "Name": "risk_enabled_critical",
+          "Generated": false
+        },
+        {
+          "Name": "risk_description_non",
+          "Generated": false
+        },
+        {
+          "Name": "risk_description_low",
+          "Generated": false
+        },
+        {
+          "Name": "risk_description_medium",
+          "Generated": false
+        },
+        {
+          "Name": "risk_description_high",
+          "Generated": false
+        },
+        {
+          "Name": "risk_description_critical",
+          "Generated": false
+        },
+        {
+          "Name": "risk_examples_non",
+          "Generated": false
+        },
+        {
+          "Name": "risk_examples_low",
+          "Generated": false
+        },
+        {
+          "Name": "risk_examples_medium",
+          "Generated": false
+        },
+        {
+          "Name": "risk_examples_high",
+          "Generated": false
+        },
+        {
+          "Name": "risk_examples_critical",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "deleted_at",
+          "Generated": false
+        },
+        {
+          "Name": "modified_by",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "report": {
+      "Name": "report",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "org_code",
+          "Generated": false
+        },
+        {
+          "Name": "company_website_url",
+          "Generated": false
+        },
+        {
+          "Name": "company_name",
+          "Generated": false
+        },
+        {
+          "Name": "report_title",
+          "Generated": false
+        },
+        {
+          "Name": "research_depth",
+          "Generated": false
+        },
+        {
+          "Name": "additional_context",
+          "Generated": false
+        },
+        {
+          "Name": "status",
+          "Generated": false
+        },
+        {
+          "Name": "max_risk",
+          "Generated": false
+        },
+        {
+          "Name": "risk_count_low",
+          "Generated": false
+        },
+        {
+          "Name": "risk_count_medium",
+          "Generated": false
+        },
+        {
+          "Name": "risk_count_high",
+          "Generated": false
+        },
+        {
+          "Name": "risk_count_critical",
+          "Generated": false
+        },
+        {
+          "Name": "created_user_id",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "updated_at",
+          "Generated": false
+        },
+        {
+          "Name": "deleted_at",
+          "Generated": false
+        },
+        {
+          "Name": "workflow_id",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "report_company": {
+      "Name": "report_company",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "report_id",
+          "Generated": false
+        },
+        {
+          "Name": "description",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "report_config": {
+      "Name": "report_config",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "org_id",
+          "Generated": false
+        },
+        {
+          "Name": "name",
+          "Generated": false
+        },
+        {
+          "Name": "description",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "report_config_question": {
+      "Name": "report_config_question",
+      "Cols": [
+        {
+          "Name": "report_config_id",
+          "Generated": false
+        },
+        {
+          "Name": "question_id",
+          "Generated": false
+        },
+        {
+          "Name": "display_order",
+          "Generated": false
+        },
+        {
+          "Name": "is_default",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": null,
+      "UniqueConstraints": [["report_config_id", "question_id"]]
+    },
+    "research_log": {
+      "Name": "research_log",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "report_id",
+          "Generated": false
+        },
+        {
+          "Name": "answer_id",
+          "Generated": false
+        },
+        {
+          "Name": "severity",
+          "Generated": false
+        },
+        {
+          "Name": "msg",
+          "Generated": false
+        },
+        {
+          "Name": "meta",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "risk": {
+      "Name": "risk",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "answer_id",
+          "Generated": false
+        },
+        {
+          "Name": "risk_level",
+          "Generated": false
+        },
+        {
+          "Name": "title",
+          "Generated": false
+        },
+        {
+          "Name": "content",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "updated_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "risk_override": {
+      "Name": "risk_override",
+      "Cols": [
+        {
+          "Name": "risk_id",
+          "Generated": false
+        },
+        {
+          "Name": "risk_level",
+          "Generated": false
+        },
+        {
+          "Name": "title",
+          "Generated": false
+        },
+        {
+          "Name": "content",
+          "Generated": false
+        },
+        {
+          "Name": "comment",
+          "Generated": false
+        },
+        {
+          "Name": "user_id",
+          "Generated": false
+        },
+        {
+          "Name": "updated_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "risk_id"
+      ]
+    },
+    "schema_migrations": {
+      "Name": "schema_migrations",
+      "Cols": [
+        {
+          "Name": "version",
+          "Generated": false
+        },
+        {
+          "Name": "dirty",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "version"
+      ]
+    },
+    "source": {
+      "Name": "source",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "report_id",
+          "Generated": false
+        },
+        {
+          "Name": "domain",
+          "Generated": false
+        },
+        {
+          "Name": "url",
+          "Generated": false
+        },
+        {
+          "Name": "title",
+          "Generated": false
+        },
+        {
+          "Name": "description",
+          "Generated": false
+        },
+        {
+          "Name": "source_classification",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "updated_at",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    },
+    "usage_log": {
+      "Name": "usage_log",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "provider",
+          "Generated": false
+        },
+        {
+          "Name": "model",
+          "Generated": false
+        },
+        {
+          "Name": "cost",
+          "Generated": false
+        },
+        {
+          "Name": "msg",
+          "Generated": false
+        },
+        {
+          "Name": "meta",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        },
+        {
+          "Name": "report_id",
+          "Generated": false
+        }
+      ],
+      "PrimaryKeyCols": [
+        "id"
+      ]
+    }
+  },
+  "Relations": [
+    {
+      "FromTable": "question_config",
+      "FromColumn": "previous_version_id",
+      "ToTable": "question_config",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "report_config_question",
+      "FromColumn": "report_config_id",
+      "ToTable": "report_config",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "report_config_question",
+      "FromColumn": "question_id",
+      "ToTable": "question_config",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "report_company",
+      "FromColumn": "report_id",
+      "ToTable": "report",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "answer",
+      "FromColumn": "report_id",
+      "ToTable": "report",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "answer",
+      "FromColumn": "question_id",
+      "ToTable": "question_config",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "risk",
+      "FromColumn": "answer_id",
+      "ToTable": "answer",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "source",
+      "FromColumn": "report_id",
+      "ToTable": "report",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "usage_log",
+      "FromColumn": "report_id",
+      "ToTable": "report",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "citation",
+      "FromColumn": "answer_id",
+      "ToTable": "answer",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "citation",
+      "FromColumn": "source_id",
+      "ToTable": "source",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "research_log",
+      "FromColumn": "report_id",
+      "ToTable": "report",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "research_log",
+      "FromColumn": "answer_id",
+      "ToTable": "answer",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "answer_research",
+      "FromColumn": "answer_id",
+      "ToTable": "answer",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "risk_override",
+      "FromColumn": "risk_id",
+      "ToTable": "risk",
+      "ToColumn": "id"
+    }
+  ]
+}

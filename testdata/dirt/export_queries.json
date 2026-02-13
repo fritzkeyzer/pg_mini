@@ -1,0 +1,80 @@
+[
+  {
+    "Table": "report",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_report AS (SELECT id, org_code, company_website_url, company_name, report_title, research_depth, additional_context, status, max_risk, risk_count_low, risk_count_medium, risk_count_high, risk_count_critical, created_user_id, created_at, updated_at, deleted_at, workflow_id FROM report);",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_report (id);",
+    "CopyToCSV": "COPY tmp_mini_report TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "answer",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_answer AS (SELECT id, report_id, question_id, display_order, status, risk_level, key_findings, detailed_analysis, created_at, updated_at FROM answer WHERE (answer.report_id IN (SELECT id FROM tmp_mini_report)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_answer (question_id,id);",
+    "CopyToCSV": "COPY tmp_mini_answer TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "report_company",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_report_company AS (SELECT id, report_id, description, created_at FROM report_company WHERE (report_company.report_id IN (SELECT id FROM tmp_mini_report)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_report_company TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "research_log",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_research_log AS (SELECT id, report_id, answer_id, severity, msg, meta, created_at FROM research_log WHERE (research_log.answer_id IN (SELECT id FROM tmp_mini_answer)) OR (research_log.report_id IN (SELECT id FROM tmp_mini_report)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_research_log TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "source",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_source AS (SELECT id, report_id, domain, url, title, description, source_classification, created_at, updated_at FROM source WHERE (source.report_id IN (SELECT id FROM tmp_mini_report)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_source (id);",
+    "CopyToCSV": "COPY tmp_mini_source TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "usage_log",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_usage_log AS (SELECT id, provider, model, cost, msg, meta, created_at, report_id FROM usage_log WHERE (usage_log.report_id IN (SELECT id FROM tmp_mini_report)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_usage_log TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "answer_research",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_answer_research AS (SELECT answer_id, data FROM answer_research WHERE (answer_research.answer_id IN (SELECT id FROM tmp_mini_answer)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_answer_research TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "citation",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_citation AS (SELECT id, answer_id, source_id, url, page_title, source_date, quoted_extracts, relevance, created_at, updated_at FROM citation WHERE (citation.answer_id IN (SELECT id FROM tmp_mini_answer)) OR (citation.source_id IN (SELECT id FROM tmp_mini_source)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_citation TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "risk",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_risk AS (SELECT id, answer_id, risk_level, title, content, created_at, updated_at FROM risk WHERE (risk.answer_id IN (SELECT id FROM tmp_mini_answer)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_risk (id);",
+    "CopyToCSV": "COPY tmp_mini_risk TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "risk_override",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_risk_override AS (SELECT risk_id, risk_level, title, content, comment, user_id, updated_at FROM risk_override WHERE (risk_override.risk_id IN (SELECT id FROM tmp_mini_risk)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_risk_override TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "question_config",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_question_config AS (SELECT id, org_id, previous_version_id, version_number, report_category, question_title, research_instructions, risk_enabled_low, risk_enabled_medium, risk_enabled_high, risk_enabled_critical, risk_description_non, risk_description_low, risk_description_medium, risk_description_high, risk_description_critical, risk_examples_non, risk_examples_low, risk_examples_medium, risk_examples_high, risk_examples_critical, created_at, deleted_at, modified_by FROM question_config WHERE (question_config.id IN (SELECT question_id FROM tmp_mini_answer)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_question_config (id);",
+    "CopyToCSV": "COPY tmp_mini_question_config TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "report_config",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_report_config AS (SELECT id, org_id, name, description FROM report_config WHERE TRUE);",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_report_config (id);",
+    "CopyToCSV": "COPY tmp_mini_report_config TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "report_config_question",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_report_config_question AS (SELECT report_config_id, question_id, display_order, is_default FROM report_config_question WHERE (report_config_question.question_id IN (SELECT id FROM tmp_mini_question_config)) OR (report_config_question.report_config_id IN (SELECT id FROM tmp_mini_report_config)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_report_config_question TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  }
+]

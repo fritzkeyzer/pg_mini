@@ -68,7 +68,7 @@ func (i *Import) Run(ctx context.Context) error {
 	if i.Upsert {
 		for _, tq := range queries {
 			if tq.Upsert == "" {
-				return fmt.Errorf("upsert requested but table %s has no primary key", tq.Table)
+				return fmt.Errorf("upsert requested but table %s has no primary key or unique constraint", tq.Table)
 			}
 		}
 	}

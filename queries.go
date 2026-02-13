@@ -98,18 +98,26 @@ func generateImportQueries(g *Graph, schema *Schema) []ImportTableQueries {
 			DropTemp:   fmt.Sprintf("DROP TABLE IF EXISTS %s;", tmpName),
 		}
 
-		// Generate upsert query if table has primary key
+		// Determine conflict target columns: prefer primary key, fall back to first unique constraint
+		var conflictCols []string
 		if len(tblSchema.PrimaryKeyCols) > 0 {
-			pkCols := strings.Join(tblSchema.PrimaryKeyCols, ", ")
+			conflictCols = tblSchema.PrimaryKeyCols
+		} else if len(tblSchema.UniqueConstraints) > 0 {
+			conflictCols = tblSchema.UniqueConstraints[0]
+		}
 
-			// Build SET clause for non-PK, non-generated columns
+		// Generate upsert query if we have a conflict target
+		if len(conflictCols) > 0 {
+			conflictColList := strings.Join(conflictCols, ", ")
+
+			// Build SET clause for non-conflict, non-generated columns
 			var setClauses []string
-			pkSet := make(map[string]bool)
-			for _, pk := range tblSchema.PrimaryKeyCols {
-				pkSet[pk] = true
+			conflictSet := make(map[string]bool)
+			for _, c := range conflictCols {
+				conflictSet[c] = true
 			}
 			for _, col := range tblSchema.Cols {
-				if !col.Generated && !pkSet[col.Name] {
+				if !col.Generated && !conflictSet[col.Name] {
 					setClauses = append(setClauses, fmt.Sprintf("%s = EXCLUDED.%s", col.Name, col.Name))
 				}
 			}
@@ -121,7 +129,7 @@ func generateImportQueries(g *Graph, schema *Schema) []ImportTableQueries {
 
 			tq.Upsert = fmt.Sprintf(
 				"INSERT INTO %s (%s) SELECT %s FROM %s ON CONFLICT (%s) %s;",
-				tbl, colList, colList, tmpName, pkCols, doClause,
+				tbl, colList, colList, tmpName, conflictColList, doClause,
 			)
 		}
 

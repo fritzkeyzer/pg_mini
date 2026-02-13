@@ -28,6 +28,11 @@ func Test_generateExportQueries(t *testing.T) {
 			dir:  "testdata/company",
 			root: "company",
 		},
+		{
+			name: "dirt",
+			dir:  "testdata/dirt",
+			root: "report",
+		},
 	}
 
 	for _, tt := range tests {
@@ -91,6 +96,11 @@ func Test_generateImportQueries(t *testing.T) {
 			name: "company",
 			dir:  "testdata/company",
 			root: "company",
+		},
+		{
+			name: "dirt",
+			dir:  "testdata/dirt",
+			root: "report",
 		},
 	}
 
