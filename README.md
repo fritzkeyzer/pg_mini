@@ -1,5 +1,7 @@
 # pg_mini
 
+[![Tests](https://github.com/fritzkeyzer/pg_mini/actions/workflows/test.yml/badge.svg)](https://github.com/fritzkeyzer/pg_mini/actions/workflows/test.yml)
+
 Create consistent, partial backups of PostgreSQL databases.
 
 Export a subset of rows from a root table and `pg_mini` automatically follows foreign key relationships to include all dependent data. Import it back with full referential integrity preserved.
