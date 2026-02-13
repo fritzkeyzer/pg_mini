@@ -15,9 +15,21 @@ Export a subset of rows from a root table and `pg_mini` automatically follows fo
 
 ## Install
 
+### Homebrew (macOS/Linux)
+
+```sh
+brew install fritzkeyzer/tap/pg_mini
+```
+
+### Go
+
 ```sh
 go install github.com/fritzkeyzer/pg_mini/cmd/pg_mini@latest
 ```
+
+### Binary
+
+Download a prebuilt binary from [Releases](https://github.com/fritzkeyzer/pg_mini/releases).
 
 ## Export
 

@@ -25,6 +25,7 @@ homebrew_casks:
   - repository:
       owner: fritzkeyzer
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/fritzkeyzer/pg_mini
     description: Create consistent, partial backups of PostgreSQL databases
     license: MIT
