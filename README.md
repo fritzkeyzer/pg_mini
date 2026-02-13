@@ -93,3 +93,7 @@ pg_mini import \
 5. Exports the temporary tables to CSV using `COPY TO`
 
 On import, the process is reversed: CSV files are loaded back in dependency order using `COPY FROM` (or upserted via temp tables).
+
+## License
+
+[MIT](LICENSE)

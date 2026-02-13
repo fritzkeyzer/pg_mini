@@ -1,0 +1,37 @@
+version: 2
+
+builds:
+  - main: ./cmd/pg_mini
+    binary: pg_mini
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+homebrew_casks:
+  - repository:
+      owner: fritzkeyzer
+      name: homebrew-tap
+    homepage: https://github.com/fritzkeyzer/pg_mini
+    description: Create consistent, partial backups of PostgreSQL databases
+    license: MIT
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
