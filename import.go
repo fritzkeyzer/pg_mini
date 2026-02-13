@@ -23,14 +23,10 @@ type Import struct {
 }
 
 // Run the import
-//   - Runs queries to understand your database schema
-//   - Build a dependency graph of tables based on foreign key relationships (including transitive dependencies!)
-//   - Provided with a root table an execution sequence is calculated to traverse the tree
-//   - A set of queries are generated that copy data into temporary tables
-//   - In the correct sequence (starting with the root table)
-//   - Only including rows that are required to fulfil the foreign key relationships
-//   - Queries are executed within a transaction for internal consistency
-//   - COPY from commands are used to export these temp tables to CSV
+//   - Loads schema from a previous export
+//   - Builds a dependency graph to determine import order
+//   - Optionally truncates tables before importing
+//   - Uses COPY FROM to import CSV files in the correct order
 func (i *Import) Run(ctx context.Context) error {
 	t0 := time.Now()
 
@@ -60,16 +56,22 @@ func (i *Import) Run(ctx context.Context) error {
 		graph.Print()
 	}
 
+	queries := generateImportQueries(graph)
+
 	if i.DryRun {
 		slog.Info("Dry run, not executing queries")
 
-		fmt.Println()
-		for _, tbl := range graph.ImportOrder {
-			if i.Truncate {
-				fmt.Println(truncateTblQuery(tbl))
-			}
+		err = SaveAsJSONFile(queries, path.Join(i.OutDir, "queries.json"))
+		if err != nil {
+			return fmt.Errorf("save queries: %w", err)
+		}
 
-			fmt.Println(copyFromCSVQuery(tbl))
+		fmt.Println()
+		for _, tq := range queries {
+			if i.Truncate {
+				fmt.Println(tq.Truncate)
+			}
+			fmt.Println(tq.CopyFromCSV)
 		}
 		fmt.Println()
 
@@ -79,29 +81,27 @@ func (i *Import) Run(ctx context.Context) error {
 
 	slog.Info("Importing...")
 
-	for _, tbl := range graph.ImportOrder {
+	for _, tq := range queries {
 		if i.Truncate {
-			truncateQuery := truncateTblQuery(tbl)
-			slog.Debug(truncateQuery)
-			_, err := i.DB.Exec(ctx, truncateQuery)
+			slog.Debug(tq.Truncate)
+			_, err := i.DB.Exec(ctx, tq.Truncate)
 			if err != nil {
 				return fmt.Errorf("truncate table: %w", err)
 			}
 			if i.Verbose || i.NoAnimations {
-				slog.Info("Truncated table: " + tbl)
+				slog.Info("Truncated table: " + tq.Table)
 			}
 		}
 
-		query := copyFromCSVQuery(tbl)
-		slog.Debug(query)
+		slog.Debug(tq.CopyFromCSV)
 
-		res, err := copyFromCSV(ctx, i.DB, tbl, query, i.OutDir)
+		res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.CopyFromCSV, i.OutDir)
 		if err != nil {
 			return fmt.Errorf("copy from csv: %w", err)
 		}
 
 		if i.Verbose || i.NoAnimations {
-			slog.Info("Imported CSV: "+tbl,
+			slog.Info("Imported CSV: "+tq.Table,
 				"rows", prettyCount(res.Rows),
 				"duration", prettyDuration(res.Duration),
 				"file size", prettyFileSize(res.FileSize),

@@ -30,11 +30,11 @@ type Table struct {
 	ReferencedByTbl []string
 	IncludeCols     []string
 
-	Status       status
-	Rows         int64
-	CopyDuration time.Duration
-	CSVDuration  time.Duration
-	CSVSize      int64
+	status       status
+	rows         int64
+	copyDuration time.Duration
+	csvDuration  time.Duration
+	csvSize      int64
 }
 
 func buildGraph(schema *Schema, rootTbl string) (*Graph, error) {

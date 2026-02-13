@@ -1,0 +1,22 @@
+[
+  {
+    "Table": "task_config",
+    "Truncate": "TRUNCATE TABLE task_config CASCADE;",
+    "CopyFromCSV": "COPY task_config FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "workflow",
+    "Truncate": "TRUNCATE TABLE workflow CASCADE;",
+    "CopyFromCSV": "COPY workflow FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "task",
+    "Truncate": "TRUNCATE TABLE task CASCADE;",
+    "CopyFromCSV": "COPY task FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "task_dependency",
+    "Truncate": "TRUNCATE TABLE task_dependency CASCADE;",
+    "CopyFromCSV": "COPY task_dependency FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  }
+]

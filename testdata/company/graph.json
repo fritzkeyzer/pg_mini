@@ -1,0 +1,277 @@
+{
+  "RootTbl": "company",
+  "Tables": {
+    "company": {
+      "Name": "company",
+      "ReferencesTbl": null,
+      "ReferencedByTbl": [
+        "company_tag",
+        "legal_entity",
+        "profile",
+        "website"
+      ],
+      "IncludeCols": [
+        "id",
+        "name",
+        "created_at"
+      ]
+    },
+    "company_tag": {
+      "Name": "company_tag",
+      "ReferencesTbl": [
+        "company",
+        "tag"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "company_id",
+        "tag_id"
+      ]
+    },
+    "legal_entity": {
+      "Name": "legal_entity",
+      "ReferencesTbl": [
+        "company"
+      ],
+      "ReferencedByTbl": [
+        "legal_entity_financial",
+        "legal_entity_tag"
+      ],
+      "IncludeCols": [
+        "id",
+        "company_id",
+        "name"
+      ]
+    },
+    "legal_entity_financial": {
+      "Name": "legal_entity_financial",
+      "ReferencesTbl": [
+        "legal_entity"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "id",
+        "legal_entity_id",
+        "revenue"
+      ]
+    },
+    "legal_entity_tag": {
+      "Name": "legal_entity_tag",
+      "ReferencesTbl": [
+        "legal_entity",
+        "tag"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "legal_entity_id",
+        "tag_id"
+      ]
+    },
+    "profile": {
+      "Name": "profile",
+      "ReferencesTbl": [
+        "company"
+      ],
+      "ReferencedByTbl": [
+        "profile_ftes",
+        "profile_tag"
+      ],
+      "IncludeCols": [
+        "id",
+        "company_id",
+        "bio"
+      ]
+    },
+    "profile_ftes": {
+      "Name": "profile_ftes",
+      "ReferencesTbl": [
+        "profile"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "id",
+        "profile_id",
+        "count"
+      ]
+    },
+    "profile_tag": {
+      "Name": "profile_tag",
+      "ReferencesTbl": [
+        "profile",
+        "tag"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "profile_id",
+        "tag_id"
+      ]
+    },
+    "tag": {
+      "Name": "tag",
+      "ReferencesTbl": null,
+      "ReferencedByTbl": [
+        "company_tag",
+        "legal_entity_tag",
+        "profile_tag",
+        "website_tag"
+      ],
+      "IncludeCols": [
+        "id",
+        "name"
+      ]
+    },
+    "website": {
+      "Name": "website",
+      "ReferencesTbl": [
+        "company"
+      ],
+      "ReferencedByTbl": [
+        "website_description",
+        "website_tag"
+      ],
+      "IncludeCols": [
+        "id",
+        "company_id",
+        "url"
+      ]
+    },
+    "website_description": {
+      "Name": "website_description",
+      "ReferencesTbl": [
+        "website"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "id",
+        "website_id",
+        "description"
+      ]
+    },
+    "website_tag": {
+      "Name": "website_tag",
+      "ReferencesTbl": [
+        "tag",
+        "website"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "website_id",
+        "tag_id"
+      ]
+    }
+  },
+  "Relations": [
+    {
+      "FromTable": "company_tag",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "company_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity_financial",
+      "FromColumn": "legal_entity_id",
+      "ToTable": "legal_entity",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity_tag",
+      "FromColumn": "legal_entity_id",
+      "ToTable": "legal_entity",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile_ftes",
+      "FromColumn": "profile_id",
+      "ToTable": "profile",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile_tag",
+      "FromColumn": "profile_id",
+      "ToTable": "profile",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website_description",
+      "FromColumn": "website_id",
+      "ToTable": "website",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website_tag",
+      "FromColumn": "website_id",
+      "ToTable": "website",
+      "ToColumn": "id"
+    }
+  ],
+  "ExportOrder": [
+    "company",
+    "company_tag",
+    "legal_entity",
+    "legal_entity_financial",
+    "legal_entity_tag",
+    "profile",
+    "profile_ftes",
+    "profile_tag",
+    "website",
+    "website_description",
+    "website_tag",
+    "tag"
+  ],
+  "ImportOrder": [
+    "company",
+    "tag",
+    "company_tag",
+    "legal_entity",
+    "legal_entity_financial",
+    "legal_entity_tag",
+    "profile",
+    "profile_ftes",
+    "profile_tag",
+    "website",
+    "website_description",
+    "website_tag"
+  ]
+}

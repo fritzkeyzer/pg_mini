@@ -11,18 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func copyToCSVQuery(tbl string) string {
-	return fmt.Sprintf("COPY %s TO STDOUT WITH CSV HEADER DELIMITER ',';", tmpTblName(tbl))
-}
-
-func truncateTblQuery(tbl string) string {
-	return fmt.Sprintf("TRUNCATE TABLE %s CASCADE;", tbl)
-}
-
-func copyFromCSVQuery(tbl string) string {
-	return fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER DELIMITER ',';", tbl)
-}
-
 type copyOutRes struct {
 	FileName string
 	Rows     int64

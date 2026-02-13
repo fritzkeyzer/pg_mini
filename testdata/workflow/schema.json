@@ -1,36 +1,4 @@
 {
-  "Relations": [
-    {
-      "FromTable": "task",
-      "FromColumn": "workflow_id",
-      "ToTable": "workflow",
-      "ToColumn": "id"
-    },
-    {
-      "FromTable": "task",
-      "FromColumn": "parent_task_id",
-      "ToTable": "task",
-      "ToColumn": "id"
-    },
-    {
-      "FromTable": "task",
-      "FromColumn": "task_name",
-      "ToTable": "task_config",
-      "ToColumn": "name"
-    },
-    {
-      "FromTable": "task_dependency",
-      "FromColumn": "task_id",
-      "ToTable": "task",
-      "ToColumn": "id"
-    },
-    {
-      "FromTable": "task_dependency",
-      "FromColumn": "depends_on_task_id",
-      "ToTable": "task",
-      "ToColumn": "id"
-    }
-  ],
   "Tables": {
     "schema_migrations": {
       "Name": "schema_migrations",
@@ -177,5 +145,37 @@
         }
       ]
     }
-  }
+  },
+  "Relations": [
+    {
+      "FromTable": "task",
+      "FromColumn": "workflow_id",
+      "ToTable": "workflow",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task",
+      "FromColumn": "parent_task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task",
+      "FromColumn": "task_name",
+      "ToTable": "task_config",
+      "ToColumn": "name"
+    },
+    {
+      "FromTable": "task_dependency",
+      "FromColumn": "task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "task_dependency",
+      "FromColumn": "depends_on_task_id",
+      "ToTable": "task",
+      "ToColumn": "id"
+    }
+  ]
 }

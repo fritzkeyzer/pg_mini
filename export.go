@@ -68,18 +68,26 @@ func (e *Export) Run(ctx context.Context) error {
 		graph.Print()
 	}
 
+	queries := generateExportQueries(graph, e.Filter, e.RawQuery)
+
 	if e.DryRun {
 		slog.Info("Dry run, not executing queries")
 
+		err = SaveAsJSONFile(queries, path.Join(e.OutDir, "queries.json"))
+		if err != nil {
+			return fmt.Errorf("save queries: %w", err)
+		}
+
 		fmt.Println()
-		for _, tbl := range graph.ExportOrder {
-			for _, query := range tempCopyQueries(graph, tbl, e.Filter, e.RawQuery) {
-				fmt.Println(query)
+		for _, tq := range queries {
+			fmt.Println(tq.CreateTmp)
+			if tq.CreateIndex != "" {
+				fmt.Println(tq.CreateIndex)
 			}
 		}
 		fmt.Println()
-		for _, tbl := range graph.ExportOrder {
-			fmt.Println(copyToCSVQuery(tbl))
+		for _, tq := range queries {
+			fmt.Println(tq.CopyToCSV)
 		}
 		fmt.Println()
 
@@ -87,10 +95,7 @@ func (e *Export) Run(ctx context.Context) error {
 		return nil
 	}
 
-	// A set of queries are generated that copy data into temporary tables
-	// In the correct sequence (starting with the root table)
-	// Only including rows that are required to fulfil the foreign key relationships
-	// run temp copy queries in transaction for consistency
+	// Execute temp copy queries in transaction for consistency
 	if e.Verbose || e.NoAnimations {
 		slog.Info("Begin transaction, copying data into temporary tables...")
 	}
@@ -99,33 +104,42 @@ func (e *Export) Run(ctx context.Context) error {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	for _, tbl := range graph.ExportOrder {
-		graph.Tables[tbl].Status = statusCopyStarted
+
+	for _, tq := range queries {
+		graph.Tables[tq.Table].status = statusCopyStarted
 		graphPrinter.Render()
 
-		t0 := time.Now()
-		queries := tempCopyQueries(graph, tbl, e.Filter, e.RawQuery)
+		tblStart := time.Now()
 		var rows int64
-		for _, query := range queries {
-			slog.Debug(query)
-			r, err := tx.Exec(ctx, query)
+
+		slog.Debug(tq.CreateTmp)
+		r, err := tx.Exec(ctx, tq.CreateTmp)
+		if err != nil {
+			return fmt.Errorf("execute query %s: %w", tq.CreateTmp, err)
+		}
+		slog.Debug(r.String())
+		rows += r.RowsAffected()
+
+		if tq.CreateIndex != "" {
+			slog.Debug(tq.CreateIndex)
+			r, err = tx.Exec(ctx, tq.CreateIndex)
 			if err != nil {
-				return fmt.Errorf("execute query %s: %w", query, err)
+				return fmt.Errorf("execute query %s: %w", tq.CreateIndex, err)
 			}
 			slog.Debug(r.String())
-			rows += r.RowsAffected()
 		}
 
-		graph.Tables[tbl].Status = statusCopyDone
-		graph.Tables[tbl].Rows = rows
-		graph.Tables[tbl].CopyDuration = time.Since(t0)
+		graph.Tables[tq.Table].status = statusCopyDone
+		graph.Tables[tq.Table].rows = rows
+		graph.Tables[tq.Table].copyDuration = time.Since(tblStart)
 		if e.NoAnimations || e.Verbose {
-			slog.Info("Copied temp table: "+tbl, "rows", prettyCount(rows),
-				"duration", prettyDuration(graph.Tables[tbl].CopyDuration),
+			slog.Info("Copied temp table: "+tq.Table, "rows", prettyCount(rows),
+				"duration", prettyDuration(graph.Tables[tq.Table].copyDuration),
 			)
 		}
 		graphPrinter.Render()
 	}
+
 	if e.Verbose || e.NoAnimations {
 		slog.Info("Commit transaction. Copying complete")
 	}
@@ -135,27 +149,26 @@ func (e *Export) Run(ctx context.Context) error {
 	}
 
 	// COPY from commands are used to export these temp tables to CSV
-	for _, tbl := range graph.ExportOrder {
-		t0 := time.Now()
+	for _, tq := range queries {
+		tblStart := time.Now()
 
-		graph.Tables[tbl].Status = statusCSVStarted
+		graph.Tables[tq.Table].status = statusCSVStarted
 		graphPrinter.Render()
 
-		query := copyToCSVQuery(tbl)
-		slog.Debug(query)
+		slog.Debug(tq.CopyToCSV)
 
-		res, err := copyToCSV(ctx, e.DB, tbl, query, e.OutDir)
+		res, err := copyToCSV(ctx, e.DB, tq.Table, tq.CopyToCSV, e.OutDir)
 		if err != nil {
 			return fmt.Errorf("copy out files: %w", err)
 		}
 
-		graph.Tables[tbl].Status = statusCSVDone
-		graph.Tables[tbl].CSVSize = res.FileSize
-		graph.Tables[tbl].CSVDuration = time.Since(t0)
+		graph.Tables[tq.Table].status = statusCSVDone
+		graph.Tables[tq.Table].csvSize = res.FileSize
+		graph.Tables[tq.Table].csvDuration = time.Since(tblStart)
 		graphPrinter.Render()
 
 		if e.NoAnimations || e.Verbose {
-			slog.Info("Exported table: "+tbl,
+			slog.Info("Exported table: "+tq.Table,
 				"file", res.FileName,
 				"rows", prettyCount(res.Rows),
 				"duration", prettyDuration(res.Duration),

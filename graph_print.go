@@ -86,28 +86,28 @@ func (g *Graph) printTable(w io.Writer, tableName string, seen map[string]bool, 
 	// Print current table with appropriate prefix
 	tableStatus := ""
 	var statusColor *color.Color = greenPrinter
-	switch table.Status {
+	switch table.status {
 	case statusCopyStarted:
 		tableStatus = " copying..."
 		statusColor = yellowPrinter
 	case statusCopyDone:
 		tableStatus = fmt.Sprintf(" (%s rows, %s)",
-			prettyCount(table.Rows),
-			prettyDuration(table.CopyDuration),
+			prettyCount(table.rows),
+			prettyDuration(table.copyDuration),
 		)
 		statusColor = yellowPrinter
 	case statusCSVStarted:
 		tableStatus = fmt.Sprintf(" (%s rows, %s) writing csv...",
-			prettyCount(table.Rows),
-			prettyDuration(table.CopyDuration),
+			prettyCount(table.rows),
+			prettyDuration(table.copyDuration),
 		)
 		statusColor = yellowPrinter
 	case statusCSVDone:
 		tableStatus = fmt.Sprintf(" (%s rows, %s, copy %s, csv %s)",
-			prettyCount(table.Rows),
-			prettyFileSize(table.CSVSize),
-			prettyDuration(table.CopyDuration),
-			prettyDuration(table.CSVDuration),
+			prettyCount(table.rows),
+			prettyFileSize(table.csvSize),
+			prettyDuration(table.copyDuration),
+			prettyDuration(table.csvDuration),
 		)
 	}
 

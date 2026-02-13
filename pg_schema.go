@@ -11,8 +11,8 @@ import (
 )
 
 type Schema struct {
-	Relations []foreignKeyRelation
 	Tables    map[string]tableSchema
+	Relations []foreignKeyRelation
 }
 
 type tableSchema struct {

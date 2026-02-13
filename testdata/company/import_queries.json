@@ -1,0 +1,62 @@
+[
+  {
+    "Table": "company",
+    "Truncate": "TRUNCATE TABLE company CASCADE;",
+    "CopyFromCSV": "COPY company FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "tag",
+    "Truncate": "TRUNCATE TABLE tag CASCADE;",
+    "CopyFromCSV": "COPY tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "company_tag",
+    "Truncate": "TRUNCATE TABLE company_tag CASCADE;",
+    "CopyFromCSV": "COPY company_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "legal_entity",
+    "Truncate": "TRUNCATE TABLE legal_entity CASCADE;",
+    "CopyFromCSV": "COPY legal_entity FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "legal_entity_financial",
+    "Truncate": "TRUNCATE TABLE legal_entity_financial CASCADE;",
+    "CopyFromCSV": "COPY legal_entity_financial FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "legal_entity_tag",
+    "Truncate": "TRUNCATE TABLE legal_entity_tag CASCADE;",
+    "CopyFromCSV": "COPY legal_entity_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "profile",
+    "Truncate": "TRUNCATE TABLE profile CASCADE;",
+    "CopyFromCSV": "COPY profile FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "profile_ftes",
+    "Truncate": "TRUNCATE TABLE profile_ftes CASCADE;",
+    "CopyFromCSV": "COPY profile_ftes FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "profile_tag",
+    "Truncate": "TRUNCATE TABLE profile_tag CASCADE;",
+    "CopyFromCSV": "COPY profile_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "website",
+    "Truncate": "TRUNCATE TABLE website CASCADE;",
+    "CopyFromCSV": "COPY website FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "website_description",
+    "Truncate": "TRUNCATE TABLE website_description CASCADE;",
+    "CopyFromCSV": "COPY website_description FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "website_tag",
+    "Truncate": "TRUNCATE TABLE website_tag CASCADE;",
+    "CopyFromCSV": "COPY website_tag FROM STDIN WITH CSV HEADER DELIMITER ',';"
+  }
+]

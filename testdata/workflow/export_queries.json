@@ -1,0 +1,26 @@
+[
+  {
+    "Table": "workflow",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_workflow AS (SELECT id, name, label, data, status, created_at, updated_at FROM workflow order by updated_at desc);",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_workflow (id);",
+    "CopyToCSV": "COPY tmp_mini_workflow TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "task_config",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_task_config AS (SELECT name, max_concurrency, max_attempts, retry_interval_min, retry_interval_max, timeout FROM task_config WHERE TRUE);",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_task_config (name);",
+    "CopyToCSV": "COPY tmp_mini_task_config TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "task",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_task AS (SELECT id, workflow_id, parent_task_id, task_name, global_dedup_key, priority, data, status, attempt, error, created_at, started_at, completed_at FROM task WHERE (task.task_name IN (SELECT name FROM tmp_mini_task_config)) OR (task.workflow_id IN (SELECT id FROM tmp_mini_workflow)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_task (id);",
+    "CopyToCSV": "COPY tmp_mini_task TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "task_dependency",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_task_dependency AS (SELECT task_id, depends_on_task_id FROM task_dependency WHERE (task_dependency.depends_on_task_id IN (SELECT id FROM tmp_mini_task)) OR (task_dependency.task_id IN (SELECT id FROM tmp_mini_task)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_task_dependency TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  }
+]

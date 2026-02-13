@@ -1,0 +1,74 @@
+[
+  {
+    "Table": "company",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_company AS (SELECT id, name, created_at FROM company);",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_company (id);",
+    "CopyToCSV": "COPY tmp_mini_company TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "company_tag",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_company_tag AS (SELECT company_id, tag_id FROM company_tag WHERE (company_tag.company_id IN (SELECT id FROM tmp_mini_company)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_company_tag (tag_id);",
+    "CopyToCSV": "COPY tmp_mini_company_tag TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "legal_entity",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_legal_entity AS (SELECT id, company_id, name FROM legal_entity WHERE (legal_entity.company_id IN (SELECT id FROM tmp_mini_company)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_legal_entity (id);",
+    "CopyToCSV": "COPY tmp_mini_legal_entity TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "legal_entity_financial",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_legal_entity_financial AS (SELECT id, legal_entity_id, revenue FROM legal_entity_financial WHERE (legal_entity_financial.legal_entity_id IN (SELECT id FROM tmp_mini_legal_entity)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_legal_entity_financial TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "legal_entity_tag",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_legal_entity_tag AS (SELECT legal_entity_id, tag_id FROM legal_entity_tag WHERE (legal_entity_tag.legal_entity_id IN (SELECT id FROM tmp_mini_legal_entity)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_legal_entity_tag (tag_id);",
+    "CopyToCSV": "COPY tmp_mini_legal_entity_tag TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "profile",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_profile AS (SELECT id, company_id, bio FROM profile WHERE (profile.company_id IN (SELECT id FROM tmp_mini_company)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_profile (id);",
+    "CopyToCSV": "COPY tmp_mini_profile TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "profile_ftes",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_profile_ftes AS (SELECT id, profile_id, count FROM profile_ftes WHERE (profile_ftes.profile_id IN (SELECT id FROM tmp_mini_profile)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_profile_ftes TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "profile_tag",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_profile_tag AS (SELECT profile_id, tag_id FROM profile_tag WHERE (profile_tag.profile_id IN (SELECT id FROM tmp_mini_profile)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_profile_tag (tag_id);",
+    "CopyToCSV": "COPY tmp_mini_profile_tag TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "website",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_website AS (SELECT id, company_id, url FROM website WHERE (website.company_id IN (SELECT id FROM tmp_mini_company)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_website (id);",
+    "CopyToCSV": "COPY tmp_mini_website TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "website_description",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_website_description AS (SELECT id, website_id, description FROM website_description WHERE (website_description.website_id IN (SELECT id FROM tmp_mini_website)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_website_description TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "website_tag",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_website_tag AS (SELECT website_id, tag_id FROM website_tag WHERE (website_tag.website_id IN (SELECT id FROM tmp_mini_website)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_website_tag (tag_id);",
+    "CopyToCSV": "COPY tmp_mini_website_tag TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "tag",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_tag AS (SELECT id, name FROM tag WHERE (tag.id IN (SELECT tag_id FROM tmp_mini_company_tag UNION DISTINCT SELECT tag_id FROM tmp_mini_legal_entity_tag UNION DISTINCT SELECT tag_id FROM tmp_mini_profile_tag UNION DISTINCT SELECT tag_id FROM tmp_mini_website_tag)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_tag TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  }
+]

@@ -8,45 +8,6 @@ import (
 
 const tmpTblPrefix = "tmp_mini_"
 
-func tempCopyQueries(g *Graph, tbl, filter, raw string) []string {
-	var selectQuery string
-	selectCols := strings.Join(g.Tables[tbl].IncludeCols, ", ")
-
-	if tbl == g.RootTbl {
-		selectQuery = fmt.Sprintf("SELECT %s FROM %s", selectCols, tbl)
-		if filter != "" {
-			selectQuery += " " + filter
-		}
-		if raw != "" {
-			selectQuery = raw
-		}
-	} else {
-		selectQuery = fmt.Sprintf("SELECT %s FROM %s WHERE %s", selectCols, tbl, genFilter(g, tbl))
-	}
-
-	queries := []string{
-		fmt.Sprintf(`CREATE TEMP TABLE %s AS (%s);`, tmpTblName(tbl), selectQuery),
-	}
-
-	var indexCols []string
-	for _, rel := range g.Relations {
-		fromIndex := slices.Index(g.ExportOrder, rel.FromTable)
-		toIndex := slices.Index(g.ExportOrder, rel.ToTable)
-
-		if rel.ToTable == tbl && !slices.Contains(indexCols, rel.ToColumn) && fromIndex > toIndex {
-			indexCols = append(indexCols, rel.ToColumn)
-		}
-		if rel.FromTable == tbl && !slices.Contains(indexCols, rel.FromColumn) && fromIndex < toIndex {
-			indexCols = append(indexCols, rel.FromColumn)
-		}
-	}
-	if len(indexCols) > 0 {
-		queries = append(queries, fmt.Sprintf(`CREATE INDEX ON %s (%s);`, tmpTblName(tbl), strings.Join(indexCols, ",")))
-	}
-
-	return queries
-}
-
 func tmpTblName(table string) string {
 	return fmt.Sprintf("%s%s", tmpTblPrefix, table)
 }

@@ -1,0 +1,274 @@
+{
+  "Tables": {
+    "company": {
+      "Name": "company",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "name",
+          "Generated": false
+        },
+        {
+          "Name": "created_at",
+          "Generated": false
+        }
+      ]
+    },
+    "company_tag": {
+      "Name": "company_tag",
+      "Cols": [
+        {
+          "Name": "company_id",
+          "Generated": false
+        },
+        {
+          "Name": "tag_id",
+          "Generated": false
+        }
+      ]
+    },
+    "tag": {
+      "Name": "tag",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "name",
+          "Generated": false
+        }
+      ]
+    },
+    "website": {
+      "Name": "website",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "company_id",
+          "Generated": false
+        },
+        {
+          "Name": "url",
+          "Generated": false
+        }
+      ]
+    },
+    "website_description": {
+      "Name": "website_description",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "website_id",
+          "Generated": false
+        },
+        {
+          "Name": "description",
+          "Generated": false
+        }
+      ]
+    },
+    "website_tag": {
+      "Name": "website_tag",
+      "Cols": [
+        {
+          "Name": "website_id",
+          "Generated": false
+        },
+        {
+          "Name": "tag_id",
+          "Generated": false
+        }
+      ]
+    },
+    "profile": {
+      "Name": "profile",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "company_id",
+          "Generated": false
+        },
+        {
+          "Name": "bio",
+          "Generated": false
+        }
+      ]
+    },
+    "profile_ftes": {
+      "Name": "profile_ftes",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "profile_id",
+          "Generated": false
+        },
+        {
+          "Name": "count",
+          "Generated": false
+        }
+      ]
+    },
+    "profile_tag": {
+      "Name": "profile_tag",
+      "Cols": [
+        {
+          "Name": "profile_id",
+          "Generated": false
+        },
+        {
+          "Name": "tag_id",
+          "Generated": false
+        }
+      ]
+    },
+    "legal_entity": {
+      "Name": "legal_entity",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "company_id",
+          "Generated": false
+        },
+        {
+          "Name": "name",
+          "Generated": false
+        }
+      ]
+    },
+    "legal_entity_financial": {
+      "Name": "legal_entity_financial",
+      "Cols": [
+        {
+          "Name": "id",
+          "Generated": false
+        },
+        {
+          "Name": "legal_entity_id",
+          "Generated": false
+        },
+        {
+          "Name": "revenue",
+          "Generated": false
+        }
+      ]
+    },
+    "legal_entity_tag": {
+      "Name": "legal_entity_tag",
+      "Cols": [
+        {
+          "Name": "legal_entity_id",
+          "Generated": false
+        },
+        {
+          "Name": "tag_id",
+          "Generated": false
+        }
+      ]
+    }
+  },
+  "Relations": [
+    {
+      "FromTable": "company_tag",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "company_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity_financial",
+      "FromColumn": "legal_entity_id",
+      "ToTable": "legal_entity",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity_tag",
+      "FromColumn": "legal_entity_id",
+      "ToTable": "legal_entity",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "legal_entity_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile_ftes",
+      "FromColumn": "profile_id",
+      "ToTable": "profile",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile_tag",
+      "FromColumn": "profile_id",
+      "ToTable": "profile",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "profile_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website",
+      "FromColumn": "company_id",
+      "ToTable": "company",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website_description",
+      "FromColumn": "website_id",
+      "ToTable": "website",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website_tag",
+      "FromColumn": "tag_id",
+      "ToTable": "tag",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "website_tag",
+      "FromColumn": "website_id",
+      "ToTable": "website",
+      "ToColumn": "id"
+    }
+  ]
+}

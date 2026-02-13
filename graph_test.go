@@ -3,6 +3,7 @@ package pg_mini
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -34,34 +35,49 @@ func graphFromFile(t *testing.T, filename string) *Graph {
 }
 
 func Test_buildGraph(t *testing.T) {
-	type args struct {
-		schema  *Schema
-		rootTbl string
-	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *Graph
-		wantErr bool
+		name string
+		dir  string
+		root string
 	}{
 		{
-			name: "workflows",
-			args: args{
-				schema:  schemaFromFile(t, "testdata/workflow_schema.json"),
-				rootTbl: "workflow",
-			},
-			want: graphFromFile(t, "testdata/workflow_graph.json"),
+			name: "workflow",
+			dir:  "testdata/workflow",
+			root: "workflow",
+		},
+		{
+			name: "company",
+			dir:  "testdata/company",
+			root: "company",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := buildGraph(tt.args.schema, tt.args.rootTbl)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildGraph() error = %v, wantErr %v", err, tt.wantErr)
+			schema := schemaFromFile(t, filepath.Join(tt.dir, "schema.json"))
+
+			got, err := buildGraph(schema, tt.root)
+			if err != nil {
+				t.Fatalf("buildGraph() error = %v", err)
+			}
+
+			goldenFile := filepath.Join(tt.dir, "graph.json")
+
+			if os.Getenv("UPDATE_GOLDEN") == "1" {
+				data, err := json.MarshalIndent(got, "", "  ")
+				if err != nil {
+					t.Fatalf("marshal: %v", err)
+				}
+				err = os.WriteFile(goldenFile, data, 0644)
+				if err != nil {
+					t.Fatalf("write golden: %v", err)
+				}
+				t.Logf("Updated golden file: %s", goldenFile)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("buildGraph() got = %v, want %v", got, tt.want)
+
+			want := graphFromFile(t, goldenFile)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("buildGraph() got = %v, want %v", got, want)
 			}
 		})
 	}
