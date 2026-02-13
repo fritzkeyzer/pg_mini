@@ -1,26 +1,53 @@
 # pg_mini
-Is a command line tool and package for creating and restoring consistent partial backups for PostgreSQL.
+
+Create consistent, partial backups of PostgreSQL databases.
+
+Export a subset of rows from a root table and `pg_mini` automatically follows foreign key relationships to include all dependent data. Import it back with full referential integrity preserved.
+
+## Why?
+
+- **Seed dev/staging databases** with realistic production data without copying the entire database
+- **Fast** — only exports the rows you need, plus their dependencies
+- **Consistent** — exports run in a single transaction, so foreign keys are always satisfied
+- **Simple** — one command to export, one to import
 
 ## Install
+
 ```sh
 go install github.com/fritzkeyzer/pg_mini/cmd/pg_mini@latest
 ```
 
-## Export dry run
-Use the --dry flag to visualize the execution plan
-```shell
-pg_mini export --conn="..." --table="product" --filter="order by random() limit 10000" --dry
-```
+## Export
 
-## Export example
-```shell
+Pick a root table, optionally filter it, and `pg_mini` exports that table plus all related tables (via foreign keys) to CSV files.
+
+```sh
 pg_mini export \
-  --conn="postgresql://user:pass@127.0.0.1:9500/core?sslmode=disable" \
-  --table="product" 
+  --conn="postgresql://user:pass@localhost:5432/mydb" \
+  --table="product" \
   --filter="where country_code='DE' order by random() limit 10000" \
   --out="backups/mini"
 ```
-Output
+
+### Filter options
+
+| Flag | Description |
+|------|-------------|
+| `--filter` | A SQL `WHERE` clause (and optional `ORDER BY` / `LIMIT`) appended to the root table query |
+| `--raw` | A complete SQL query to use instead of `--filter` (mutually exclusive with `--filter`) |
+
+Only the root table is filtered. All dependent tables are automatically included based on the foreign key relationships to the filtered root rows.
+
+### Dry run
+
+Use `--dry` to preview the generated SQL without executing anything:
+
+```sh
+pg_mini export --conn="..." --table="product" --filter="limit 100" --dry
+```
+
+### Example output
+
 ```
 product (10k rows, 732kB, copy 521ms, csv 63ms)
 ├── product_tag (121k rows, 3MB, copy 124ms, csv 320ms)
@@ -32,27 +59,35 @@ product (10k rows, 732kB, copy 521ms, csv 63ms)
     ├── website_tag (139k rows, 3MB, copy 144ms, csv 317ms)
     ├── website_task (40k rows, 3MB, copy 127ms, csv 114ms)
     └── website_url (11k rows, 483kB, copy 53ms, csv 31ms)
-
-tag (63k rows, 200MB, copy 348ms, csv 1.09s)
-├── product_tag (121k rows, 3MB, copy 124ms, csv 320ms)
-└── vendor_tag (17k rows, 381kB, copy 48ms, csv 43ms)
-
-user (5k rows, 6.2MB, copy 148ms, csv 534ms)
-├── user_saved (5k rows, 1MB, copy 33ms, csv 16ms)
-└── user_cart (0 rows, 118B, copy 1ms, csv 1ms)
-
-2024/11/03 02:53:30 Done in 3.83s
-2024/11/03 02:53:30 Exported to backups/mini
 ```
+
+## Import
+
+Import a previously exported backup into a database:
+
+```sh
+pg_mini import \
+  --conn="postgresql://user:pass@localhost:5432/mydb" \
+  --table="product" \
+  --out="backups/mini"
+```
+
+### Import modes
+
+| Flag | Behavior |
+|------|----------|
+| *(default)* | `COPY FROM` — fast bulk insert, fails on conflicts |
+| `--truncate` | Truncates target tables (in reverse dependency order) before importing |
+| `--upsert` | Loads into temp tables, then `INSERT ... ON CONFLICT DO UPDATE` — merges data without deleting existing rows. Requires primary keys or unique constraints. |
+
+`--truncate` and `--upsert` are mutually exclusive.
 
 ## How it works
 
-Steps
-- Runs queries to understand your database schema
-- Build a dependency graph of tables based on foreign key relationships (including transitive dependencies!)
-- Provided with a root table an execution sequence is calculated to traverse the tree in the correct order
-- A set of queries are generated that copy data into temporary tables
-  - In the correct sequence (starting with the root table)
-  - Only including rows that are required to fulfil the foreign key relationships
-- Queries are executed within a transaction for internal consistency
-- COPY from commands are used to export these temp tables to CSV
+1. Queries the database to discover the schema (tables, columns, foreign keys, primary keys)
+2. Builds a dependency graph from foreign key relationships, including transitive dependencies
+3. Generates queries to copy data into temporary tables in the correct order — starting from the filtered root table and following foreign keys so only referenced rows are included
+4. Executes all copy queries within a single transaction for consistency
+5. Exports the temporary tables to CSV using `COPY TO`
+
+On import, the process is reversed: CSV files are loaded back in dependency order using `COPY FROM` (or upserted via temp tables).
