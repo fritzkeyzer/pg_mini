@@ -38,8 +38,9 @@ func main() {
 	}
 
 	app := &cli.Command{
-		Name:  "pg_mini",
-		Usage: "Create and restore consistent partial Postgres backups",
+		Name:    "pg_mini",
+		Usage:   "Create and restore consistent partial Postgres backups",
+		Version: "0.1.2",
 		Commands: []*cli.Command{
 			{
 				Name: "export",
