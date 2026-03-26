@@ -18,9 +18,10 @@ var whitePrinter = color.New(color.FgWhite)
 var redPrinter = color.New(color.FgRed)
 
 type GraphPrinter struct {
-	g       *Graph
-	w       io.Writer
-	enabled bool
+	g         *Graph
+	w         io.Writer
+	enabled   bool
+	prevLines int
 }
 
 func (g *GraphPrinter) Init(w io.Writer) {
@@ -32,14 +33,14 @@ func (g *GraphPrinter) Render() {
 	if !g.enabled {
 		return
 	}
-	g.g.print(g.w, true)
+	g.prevLines = g.g.printAnim(g.w, g.prevLines)
 }
 
 func (g *Graph) Print() {
 	g.print(os.Stdout, false)
 }
 
-func (g *Graph) print(w io.Writer, anim bool) {
+func (g *Graph) renderBuf() *bytes.Buffer {
 	buf := &bytes.Buffer{}
 
 	fmt.Fprintln(buf)
@@ -61,6 +62,12 @@ func (g *Graph) print(w io.Writer, anim bool) {
 
 	fmt.Fprintln(buf)
 
+	return buf
+}
+
+func (g *Graph) print(w io.Writer, anim bool) {
+	buf := g.renderBuf()
+
 	if anim {
 		lines := strings.Split(buf.String(), "\n")
 		fmt.Fprintf(w, "\033[%dA", len(lines)+2)
@@ -71,6 +78,24 @@ func (g *Graph) print(w io.Writer, anim bool) {
 	} else {
 		fmt.Fprint(w, buf.String())
 	}
+}
+
+func (g *Graph) printAnim(w io.Writer, prevLines int) int {
+	buf := g.renderBuf()
+	lines := strings.Split(buf.String(), "\n")
+	// strings.Split on trailing \n produces an extra empty element;
+	// the actual printed line count is len(lines)-1 since we use Fprintln per line
+	lineCount := len(lines)
+
+	if prevLines > 0 {
+		fmt.Fprintf(w, "\033[%dA", prevLines)
+	}
+	for _, line := range lines {
+		fmt.Fprint(w, "\033[2K") // Clear line
+		fmt.Fprintln(w, line)
+	}
+
+	return lineCount
 }
 
 func (g *Graph) printTable(w io.Writer, tableName string, seen map[string]bool, level int, isLast bool, prefix string) {
