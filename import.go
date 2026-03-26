@@ -15,8 +15,9 @@ type Import struct {
 	DB        *pgx.Conn
 	RootTable string
 	Truncate  bool
-	Upsert    bool
-	OutDir    string
+	Upsert     bool
+	SoftInsert bool
+	OutDir     string
 
 	DryRun       bool
 	Verbose      bool
@@ -73,6 +74,15 @@ func (i *Import) Run(ctx context.Context) error {
 		}
 	}
 
+	// Validate soft insert: all tables must have primary keys
+	if i.SoftInsert {
+		for _, tq := range queries {
+			if tq.SoftInsert == "" {
+				return fmt.Errorf("soft insert requested but table %s has no primary key or unique constraint", tq.Table)
+			}
+		}
+	}
+
 	if i.DryRun {
 		slog.Info("Dry run, not executing queries")
 
@@ -85,6 +95,11 @@ func (i *Import) Run(ctx context.Context) error {
 				fmt.Println(tq.CreateTemp)
 				fmt.Println(tq.CopyTemp)
 				fmt.Println(tq.Upsert)
+				fmt.Println(tq.DropTemp)
+			} else if i.SoftInsert {
+				fmt.Println(tq.CreateTemp)
+				fmt.Println(tq.CopyTemp)
+				fmt.Println(tq.SoftInsert)
 				fmt.Println(tq.DropTemp)
 			} else {
 				fmt.Println(tq.Copy)
@@ -141,6 +156,42 @@ func (i *Import) Run(ctx context.Context) error {
 
 			if i.Verbose || i.NoAnimations {
 				slog.Info("Upserted: "+tq.Table,
+					"rows", prettyCount(res.Rows),
+					"duration", prettyDuration(res.Duration),
+					"file size", prettyFileSize(res.FileSize),
+				)
+			}
+		} else if i.SoftInsert {
+			// Create temp table
+			slog.Debug(tq.CreateTemp)
+			_, err := i.DB.Exec(ctx, tq.CreateTemp)
+			if err != nil {
+				return fmt.Errorf("create temp table for %s: %w", tq.Table, err)
+			}
+
+			// COPY into temp table
+			slog.Debug(tq.CopyTemp)
+			res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.CopyTemp, i.OutDir)
+			if err != nil {
+				return fmt.Errorf("copy from csv into temp table: %w", err)
+			}
+
+			// Soft insert from temp into target (skip conflicts)
+			slog.Debug(tq.SoftInsert)
+			_, err = i.DB.Exec(ctx, tq.SoftInsert)
+			if err != nil {
+				return fmt.Errorf("soft insert from temp table for %s: %w", tq.Table, err)
+			}
+
+			// Drop temp table
+			slog.Debug(tq.DropTemp)
+			_, err = i.DB.Exec(ctx, tq.DropTemp)
+			if err != nil {
+				return fmt.Errorf("drop temp table for %s: %w", tq.Table, err)
+			}
+
+			if i.Verbose || i.NoAnimations {
+				slog.Info("Soft inserted: "+tq.Table,
 					"rows", prettyCount(res.Rows),
 					"duration", prettyDuration(res.Duration),
 					"file size", prettyFileSize(res.FileSize),

@@ -335,3 +335,77 @@ func TestE2E_Upsert(t *testing.T) {
 		compareSnapshots(t, map[string][][]string{table: wantRows}, map[string][][]string{table: restored[table]})
 	}
 }
+
+func TestE2E_SoftInsert(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping e2e test in short mode")
+	}
+
+	connStr := startPostgres(t)
+	ctx := context.Background()
+
+	// Setup schema and seed data
+	setupConn := connect(t, connStr)
+	execSQLFile(t, setupConn, "testdata/e2e/company/setup.sql")
+
+	// Export
+	outDir := "testdata/e2e/company/backup"
+	exportConn := connect(t, connStr)
+	exp := &Export{
+		DB:           exportConn,
+		RootTable:    "company",
+		OutDir:       outDir,
+		NoAnimations: true,
+	}
+	if err := exp.Run(ctx); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+
+	// Mutate a row and insert an extra row
+	mutateConn := connect(t, connStr)
+	_, err := mutateConn.Exec(ctx, "UPDATE company SET name = 'MUTATED' WHERE id = 1")
+	if err != nil {
+		t.Fatalf("mutate: %v", err)
+	}
+	_, err = mutateConn.Exec(ctx, "INSERT INTO company (id, name, created_at) VALUES (99, 'Extra Corp', '2024-06-01 00:00:00')")
+	if err != nil {
+		t.Fatalf("insert extra row: %v", err)
+	}
+
+	// Import with soft-insert (should skip conflicting rows, keeping mutations intact)
+	importConn := connect(t, connStr)
+	imp := &Import{
+		DB:           importConn,
+		RootTable:    "company",
+		SoftInsert:   true,
+		OutDir:       outDir,
+		NoAnimations: true,
+	}
+	if err := imp.Run(ctx); err != nil {
+		t.Fatalf("import soft-insert: %v", err)
+	}
+
+	// Verify mutated row was NOT overwritten (soft insert skips conflicts)
+	verifyConn := connect(t, connStr)
+	var name string
+	if err := verifyConn.QueryRow(ctx, "SELECT name FROM company WHERE id = 1").Scan(&name); err != nil {
+		t.Fatalf("verify mutation preserved: %v", err)
+	}
+	if name != "MUTATED" {
+		t.Errorf("expected mutated row to remain 'MUTATED', got %s", name)
+	}
+
+	// Verify extra row still exists
+	if err := verifyConn.QueryRow(ctx, "SELECT name FROM company WHERE id = 99").Scan(&name); err != nil {
+		t.Fatalf("verify extra row: %v", err)
+	}
+	if name != "Extra Corp" {
+		t.Errorf("expected extra row 'Extra Corp', got %s", name)
+	}
+
+	// Verify company table has original 3 + extra row
+	restored := snapshotDB(t, connect(t, connStr))
+	if len(restored["company"]) != 4 {
+		t.Errorf("table company: want 4 rows, got %d", len(restored["company"]))
+	}
+}

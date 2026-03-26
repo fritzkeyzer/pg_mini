@@ -4,7 +4,8 @@
 
 Create consistent, partial backups of PostgreSQL databases.
 
-Export a subset of rows from a root table and `pg_mini` automatically follows foreign key relationships to include all dependent data. Import it back with full referential integrity preserved.
+Export a subset of rows from a root table and `pg_mini` automatically follows foreign key relationships to include all
+dependent data. Import it back with full referential integrity preserved.
 
 ## Why?
 
@@ -33,7 +34,8 @@ Download a prebuilt binary from [Releases](https://github.com/fritzkeyzer/pg_min
 
 ## Export
 
-Pick a root table, optionally filter it, and `pg_mini` exports that table plus all related tables (via foreign keys) to CSV files.
+Pick a root table, optionally filter it, and `pg_mini` exports that table plus all related tables (via foreign keys) to
+CSV files.
 
 ```sh
 pg_mini export \
@@ -45,12 +47,13 @@ pg_mini export \
 
 ### Filter options
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                                                                               |
+|------------|-------------------------------------------------------------------------------------------|
 | `--filter` | A SQL `WHERE` clause (and optional `ORDER BY` / `LIMIT`) appended to the root table query |
-| `--raw` | A complete SQL query to use instead of `--filter` (mutually exclusive with `--filter`) |
+| `--raw`    | A complete SQL query to use instead of `--filter` (mutually exclusive with `--filter`)    |
 
-Only the root table is filtered. All dependent tables are automatically included based on the foreign key relationships to the filtered root rows.
+Only the root table is filtered. All dependent tables are automatically included based on the foreign key relationships
+to the filtered root rows.
 
 ### Dry run
 
@@ -88,23 +91,26 @@ pg_mini import \
 
 ### Import modes
 
-| Flag | Behavior |
-|------|----------|
-| *(default)* | `COPY FROM` — fast bulk insert, fails on conflicts |
-| `--truncate` | Truncates target tables (in reverse dependency order) before importing |
-| `--upsert` | Loads into temp tables, then `INSERT ... ON CONFLICT DO UPDATE` — merges data without deleting existing rows. Requires primary keys or unique constraints. |
+| Flag            | Behavior                                                                                                                                                                |
+|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| *(default)*     | `COPY FROM` — fast bulk insert, fails on conflicts                                                                                                                      |
+| `--truncate`    | Truncates target tables (in reverse dependency order) before importing                                                                                                  |
+| `--upsert`      | Loads into temp tables, then `INSERT ... ON CONFLICT DO UPDATE` — merges data without deleting existing rows. Requires primary keys or unique constraints.              |
+| `--soft-insert` | Loads into temp tables, then `INSERT ... ON CONFLICT DO NOTHING` — inserts only new rows, skipping any that already exist. Requires primary keys or unique constraints. |
 
-`--truncate` and `--upsert` are mutually exclusive.
+`--truncate`, `--upsert`, and `--soft-insert` are mutually exclusive.
 
 ## How it works
 
 1. Queries the database to discover the schema (tables, columns, foreign keys, primary keys)
 2. Builds a dependency graph from foreign key relationships, including transitive dependencies
-3. Generates queries to copy data into temporary tables in the correct order — starting from the filtered root table and following foreign keys so only referenced rows are included
+3. Generates queries to copy data into temporary tables in the correct order — starting from the filtered root table and
+   following foreign keys so only referenced rows are included
 4. Executes all copy queries within a single transaction for consistency
 5. Exports the temporary tables to CSV using `COPY TO`
 
-On import, the process is reversed: CSV files are loaded back in dependency order using `COPY FROM` (or upserted via temp tables).
+On import, the process is reversed: CSV files are loaded back in dependency order using `COPY FROM` (or
+upserted/soft-inserted via temp tables).
 
 ## License
 

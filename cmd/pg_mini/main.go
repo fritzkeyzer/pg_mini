@@ -40,7 +40,7 @@ func main() {
 	app := &cli.Command{
 		Name:    "pg_mini",
 		Usage:   "Create and restore consistent partial Postgres backups",
-		Version: "0.1.2",
+		Version: "0.1.5",
 		Commands: []*cli.Command{
 			{
 				Name: "export",
@@ -106,6 +106,7 @@ func main() {
 					&cli.StringFlag{Name: "table", Usage: "required, the top-level table used for the export"},
 					&cli.BoolFlag{Name: "truncate", Usage: "truncate the target table before importing"},
 					&cli.BoolFlag{Name: "upsert", Usage: "use INSERT ... ON CONFLICT DO UPDATE instead of plain COPY (requires primary keys)"},
+					&cli.BoolFlag{Name: "soft-insert", Usage: "use INSERT ... ON CONFLICT DO NOTHING instead of plain COPY (requires primary keys)"},
 					&cli.StringFlag{Name: "out", Usage: "required, the directory to read the exported files from"},
 					&cli.BoolFlag{Name: "dry", Usage: "skip execution of queries"},
 					&verboseFlag,
@@ -121,6 +122,7 @@ func main() {
 
 					truncate := cmd.Bool("truncate")
 					upsert := cmd.Bool("upsert")
+					softInsert := cmd.Bool("soft-insert")
 
 					if connURI == "" {
 						return fmt.Errorf("must provide a connection string")
@@ -130,6 +132,12 @@ func main() {
 					}
 					if truncate && upsert {
 						return fmt.Errorf("--truncate and --upsert are mutually exclusive")
+					}
+					if truncate && softInsert {
+						return fmt.Errorf("--truncate and --soft-insert are mutually exclusive")
+					}
+					if upsert && softInsert {
+						return fmt.Errorf("--upsert and --soft-insert are mutually exclusive")
 					}
 
 					db, err := pgx.Connect(ctx, connURI)
@@ -142,6 +150,7 @@ func main() {
 						RootTable:    cmd.String("table"),
 						Truncate:     truncate,
 						Upsert:       upsert,
+						SoftInsert:   softInsert,
 						OutDir:       outDir,
 						DryRun:       cmd.Bool("dry"),
 						Verbose:      cmd.Bool("verbose"),

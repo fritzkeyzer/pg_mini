@@ -6,6 +6,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_company (LIKE company INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_company (id, name, created_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO company (id, name, created_at) SELECT id, name, created_at FROM tmp_import_company ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, created_at = EXCLUDED.created_at;",
+    "SoftInsert": "INSERT INTO company (id, name, created_at) SELECT id, name, created_at FROM tmp_import_company ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_company;"
   },
   {
@@ -15,6 +16,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_tag (LIKE tag INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_tag (id, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO tag (id, name) SELECT id, name FROM tmp_import_tag ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;",
+    "SoftInsert": "INSERT INTO tag (id, name) SELECT id, name FROM tmp_import_tag ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_tag;"
   },
   {
@@ -24,6 +26,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_company_tag (LIKE company_tag INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_company_tag (company_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO company_tag (company_id, tag_id) SELECT company_id, tag_id FROM tmp_import_company_tag ON CONFLICT (company_id, tag_id) DO NOTHING;",
+    "SoftInsert": "INSERT INTO company_tag (company_id, tag_id) SELECT company_id, tag_id FROM tmp_import_company_tag ON CONFLICT (company_id, tag_id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_company_tag;"
   },
   {
@@ -33,6 +36,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_legal_entity (LIKE legal_entity INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_legal_entity (id, company_id, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO legal_entity (id, company_id, name) SELECT id, company_id, name FROM tmp_import_legal_entity ON CONFLICT (id) DO UPDATE SET company_id = EXCLUDED.company_id, name = EXCLUDED.name;",
+    "SoftInsert": "INSERT INTO legal_entity (id, company_id, name) SELECT id, company_id, name FROM tmp_import_legal_entity ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_legal_entity;"
   },
   {
@@ -42,6 +46,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_legal_entity_financial (LIKE legal_entity_financial INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_legal_entity_financial (id, legal_entity_id, revenue) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO legal_entity_financial (id, legal_entity_id, revenue) SELECT id, legal_entity_id, revenue FROM tmp_import_legal_entity_financial ON CONFLICT (id) DO UPDATE SET legal_entity_id = EXCLUDED.legal_entity_id, revenue = EXCLUDED.revenue;",
+    "SoftInsert": "INSERT INTO legal_entity_financial (id, legal_entity_id, revenue) SELECT id, legal_entity_id, revenue FROM tmp_import_legal_entity_financial ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_legal_entity_financial;"
   },
   {
@@ -51,6 +56,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_legal_entity_tag (LIKE legal_entity_tag INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_legal_entity_tag (legal_entity_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO legal_entity_tag (legal_entity_id, tag_id) SELECT legal_entity_id, tag_id FROM tmp_import_legal_entity_tag ON CONFLICT (legal_entity_id, tag_id) DO NOTHING;",
+    "SoftInsert": "INSERT INTO legal_entity_tag (legal_entity_id, tag_id) SELECT legal_entity_id, tag_id FROM tmp_import_legal_entity_tag ON CONFLICT (legal_entity_id, tag_id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_legal_entity_tag;"
   },
   {
@@ -60,6 +66,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_profile (LIKE profile INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_profile (id, company_id, bio) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO profile (id, company_id, bio) SELECT id, company_id, bio FROM tmp_import_profile ON CONFLICT (id) DO UPDATE SET company_id = EXCLUDED.company_id, bio = EXCLUDED.bio;",
+    "SoftInsert": "INSERT INTO profile (id, company_id, bio) SELECT id, company_id, bio FROM tmp_import_profile ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_profile;"
   },
   {
@@ -69,6 +76,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_profile_ftes (LIKE profile_ftes INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_profile_ftes (id, profile_id, count) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO profile_ftes (id, profile_id, count) SELECT id, profile_id, count FROM tmp_import_profile_ftes ON CONFLICT (id) DO UPDATE SET profile_id = EXCLUDED.profile_id, count = EXCLUDED.count;",
+    "SoftInsert": "INSERT INTO profile_ftes (id, profile_id, count) SELECT id, profile_id, count FROM tmp_import_profile_ftes ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_profile_ftes;"
   },
   {
@@ -78,6 +86,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_profile_tag (LIKE profile_tag INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_profile_tag (profile_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO profile_tag (profile_id, tag_id) SELECT profile_id, tag_id FROM tmp_import_profile_tag ON CONFLICT (profile_id, tag_id) DO NOTHING;",
+    "SoftInsert": "INSERT INTO profile_tag (profile_id, tag_id) SELECT profile_id, tag_id FROM tmp_import_profile_tag ON CONFLICT (profile_id, tag_id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_profile_tag;"
   },
   {
@@ -87,6 +96,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_website (LIKE website INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_website (id, company_id, url) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO website (id, company_id, url) SELECT id, company_id, url FROM tmp_import_website ON CONFLICT (id) DO UPDATE SET company_id = EXCLUDED.company_id, url = EXCLUDED.url;",
+    "SoftInsert": "INSERT INTO website (id, company_id, url) SELECT id, company_id, url FROM tmp_import_website ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_website;"
   },
   {
@@ -96,6 +106,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_website_description (LIKE website_description INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_website_description (id, website_id, description) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO website_description (id, website_id, description) SELECT id, website_id, description FROM tmp_import_website_description ON CONFLICT (id) DO UPDATE SET website_id = EXCLUDED.website_id, description = EXCLUDED.description;",
+    "SoftInsert": "INSERT INTO website_description (id, website_id, description) SELECT id, website_id, description FROM tmp_import_website_description ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_website_description;"
   },
   {
@@ -105,6 +116,7 @@
     "CreateTemp": "CREATE TEMP TABLE tmp_import_website_tag (LIKE website_tag INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_website_tag (website_id, tag_id) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO website_tag (website_id, tag_id) SELECT website_id, tag_id FROM tmp_import_website_tag ON CONFLICT (website_id, tag_id) DO NOTHING;",
+    "SoftInsert": "INSERT INTO website_tag (website_id, tag_id) SELECT website_id, tag_id FROM tmp_import_website_tag ON CONFLICT (website_id, tag_id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_website_tag;"
   }
 ]

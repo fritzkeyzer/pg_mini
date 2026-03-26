@@ -2,6 +2,7 @@ package pg_mini
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -21,6 +22,7 @@ type ImportTableQueries struct {
 	CreateTemp string // CREATE TEMP TABLE tmp_import_X (LIKE X INCLUDING ALL)
 	CopyTemp   string // COPY tmp_import_X FROM STDIN WITH CSV HEADER ...
 	Upsert     string // INSERT INTO X SELECT * FROM tmp ON CONFLICT (...) DO UPDATE SET ...
+	SoftInsert string // INSERT INTO X SELECT * FROM tmp ON CONFLICT (...) DO NOTHING
 	DropTemp   string // DROP TABLE IF EXISTS tmp_import_X
 }
 
@@ -52,13 +54,13 @@ func generateExportQueries(g *Graph, filter, raw string) []ExportTableQueries {
 		// Build index query
 		var indexCols []string
 		for _, rel := range g.Relations {
-			fromIndex := indexOf(g.ExportOrder, rel.FromTable)
-			toIndex := indexOf(g.ExportOrder, rel.ToTable)
+			fromIndex := slices.Index(g.ExportOrder, rel.FromTable)
+			toIndex := slices.Index(g.ExportOrder, rel.ToTable)
 
-			if rel.ToTable == tbl && !contains(indexCols, rel.ToColumn) && fromIndex > toIndex {
+			if rel.ToTable == tbl && !slices.Contains(indexCols, rel.ToColumn) && fromIndex > toIndex {
 				indexCols = append(indexCols, rel.ToColumn)
 			}
-			if rel.FromTable == tbl && !contains(indexCols, rel.FromColumn) && fromIndex < toIndex {
+			if rel.FromTable == tbl && !slices.Contains(indexCols, rel.FromColumn) && fromIndex < toIndex {
 				indexCols = append(indexCols, rel.FromColumn)
 			}
 		}
@@ -90,11 +92,11 @@ func generateImportQueries(g *Graph, schema *Schema) []ImportTableQueries {
 		tmpName := "tmp_import_" + tbl
 
 		tq := ImportTableQueries{
-			Table:        tbl,
-			Truncate:     fmt.Sprintf("TRUNCATE TABLE %s CASCADE;", tbl),
-			Copy:  fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tbl, colList),
+			Table:      tbl,
+			Truncate:   fmt.Sprintf("TRUNCATE TABLE %s CASCADE;", tbl),
+			Copy:       fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tbl, colList),
 			CreateTemp: fmt.Sprintf("CREATE TEMP TABLE %s (LIKE %s INCLUDING ALL);", tmpName, tbl),
-			CopyTemp: fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tmpName, colList),
+			CopyTemp:   fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tmpName, colList),
 			DropTemp:   fmt.Sprintf("DROP TABLE IF EXISTS %s;", tmpName),
 		}
 
@@ -131,28 +133,15 @@ func generateImportQueries(g *Graph, schema *Schema) []ImportTableQueries {
 				"INSERT INTO %s (%s) SELECT %s FROM %s ON CONFLICT (%s) %s;",
 				tbl, colList, colList, tmpName, conflictColList, doClause,
 			)
+
+			tq.SoftInsert = fmt.Sprintf(
+				"INSERT INTO %s (%s) SELECT %s FROM %s ON CONFLICT (%s) DO NOTHING;",
+				tbl, colList, colList, tmpName, conflictColList,
+			)
 		}
 
 		result = append(result, tq)
 	}
 
 	return result
-}
-
-func indexOf(slice []string, s string) int {
-	for i, v := range slice {
-		if v == s {
-			return i
-		}
-	}
-	return -1
-}
-
-func contains(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
