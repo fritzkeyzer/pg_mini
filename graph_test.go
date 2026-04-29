@@ -50,6 +50,11 @@ func Test_buildGraph(t *testing.T) {
 			dir:  "testdata/company",
 			root: "company",
 		},
+		{
+			name: "example_2",
+			dir:  "testdata/example_2",
+			root: "job",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

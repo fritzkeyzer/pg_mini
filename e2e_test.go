@@ -336,6 +336,132 @@ func TestE2E_Upsert(t *testing.T) {
 	}
 }
 
+func TestE2E_Example2_TransitiveDeps(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping e2e test in short mode")
+	}
+
+	connStr := startPostgres(t)
+	ctx := context.Background()
+
+	setupConn := connect(t, connStr)
+	execSQLFile(t, setupConn, "testdata/e2e/example_2/setup.sql")
+
+	outDir := t.TempDir()
+
+	t.Run("job_a_no_entities", func(t *testing.T) {
+		exportConn := connect(t, connStr)
+		exp := &Export{
+			DB:           exportConn,
+			RootTable:    "job",
+			Filter:       "WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001'",
+			OutDir:       outDir,
+			NoAnimations: true,
+		}
+		if err := exp.Run(ctx); err != nil {
+			t.Fatalf("export: %v", err)
+		}
+
+		// Count rows exported per table by reading the CSV files
+		counts := make(map[string]int)
+		entries, err := os.ReadDir(outDir)
+		if err != nil {
+			t.Fatalf("read outDir: %v", err)
+		}
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			if !strings.HasSuffix(e.Name(), ".csv") {
+				continue
+			}
+			data, err := os.ReadFile(outDir + "/" + e.Name())
+			if err != nil {
+				t.Fatalf("read file %s: %v", e.Name(), err)
+			}
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			// subtract 1 for header row; if file is empty or only header, count is 0
+			rowCount := 0
+			for _, l := range lines {
+				if l != "" {
+					rowCount++
+				}
+			}
+			if rowCount > 0 {
+				rowCount-- // header row
+			}
+			tableName := strings.TrimSuffix(e.Name(), ".csv")
+			counts[tableName] = rowCount
+		}
+
+		// Job A has no entities, sources, or files
+		for _, tbl := range []string{"entity", "source", "file", "file_identifier"} {
+			if counts[tbl] != 0 {
+				t.Errorf("table %s: want 0 rows, got %d", tbl, counts[tbl])
+			}
+		}
+		// Job A has 1 job, 1 job_event, 1 job_event_delivery
+		for tbl, want := range map[string]int{"job": 1, "job_event": 1, "job_event_delivery": 1} {
+			if counts[tbl] != want {
+				t.Errorf("table %s: want %d rows, got %d", tbl, want, counts[tbl])
+			}
+		}
+	})
+
+	outDir2 := t.TempDir()
+
+	t.Run("job_b_with_entities", func(t *testing.T) {
+		exportConn := connect(t, connStr)
+		exp := &Export{
+			DB:           exportConn,
+			RootTable:    "job",
+			Filter:       "WHERE id = 'bbbbbbbb-0000-0000-0000-000000000002'",
+			OutDir:       outDir2,
+			NoAnimations: true,
+		}
+		if err := exp.Run(ctx); err != nil {
+			t.Fatalf("export: %v", err)
+		}
+
+		counts := make(map[string]int)
+		entries, err := os.ReadDir(outDir2)
+		if err != nil {
+			t.Fatalf("read outDir: %v", err)
+		}
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			if !strings.HasSuffix(e.Name(), ".csv") {
+				continue
+			}
+			data, err := os.ReadFile(outDir2 + "/" + e.Name())
+			if err != nil {
+				t.Fatalf("read file %s: %v", e.Name(), err)
+			}
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			rowCount := 0
+			for _, l := range lines {
+				if l != "" {
+					rowCount++
+				}
+			}
+			if rowCount > 0 {
+				rowCount-- // header row
+			}
+			tableName := strings.TrimSuffix(e.Name(), ".csv")
+			counts[tableName] = rowCount
+		}
+
+		// Job B has 1 entity, 1 source, 1 file, 1 file_identifier
+		for tbl, want := range map[string]int{"entity": 1, "source": 1, "file": 1, "file_identifier": 1} {
+			if counts[tbl] != want {
+				t.Errorf("table %s: want %d rows, got %d", tbl, want, counts[tbl])
+			}
+		}
+	})
+}
+
 func TestE2E_SoftInsert(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e test in short mode")

@@ -1,0 +1,136 @@
+{
+  "Tables": {
+    "file": {
+      "Name": "file",
+      "Cols": [
+        {"Name": "id", "Generated": false},
+        {"Name": "created_at", "Generated": false},
+        {"Name": "filename", "Generated": false},
+        {"Name": "mime_type", "Generated": false}
+      ],
+      "PrimaryKeyCols": ["id"]
+    },
+    "file_identifier": {
+      "Name": "file_identifier",
+      "Cols": [
+        {"Name": "file_id", "Generated": false},
+        {"Name": "key", "Generated": false},
+        {"Name": "value", "Generated": false}
+      ],
+      "PrimaryKeyCols": []
+    },
+    "source": {
+      "Name": "source",
+      "Cols": [
+        {"Name": "id", "Generated": false},
+        {"Name": "file_id", "Generated": false},
+        {"Name": "title", "Generated": false},
+        {"Name": "url", "Generated": false},
+        {"Name": "accessed_at", "Generated": false}
+      ],
+      "PrimaryKeyCols": ["id"]
+    },
+    "job": {
+      "Name": "job",
+      "Cols": [
+        {"Name": "id", "Generated": false},
+        {"Name": "created_at", "Generated": false},
+        {"Name": "status", "Generated": false},
+        {"Name": "title", "Generated": false}
+      ],
+      "PrimaryKeyCols": ["id"]
+    },
+    "entity": {
+      "Name": "entity",
+      "Cols": [
+        {"Name": "id", "Generated": false},
+        {"Name": "job_id", "Generated": false},
+        {"Name": "created_at", "Generated": false},
+        {"Name": "entity_type", "Generated": false},
+        {"Name": "name", "Generated": false}
+      ],
+      "PrimaryKeyCols": ["id"]
+    },
+    "entity_claim": {
+      "Name": "entity_claim",
+      "Cols": [
+        {"Name": "id", "Generated": false},
+        {"Name": "entity_id", "Generated": false},
+        {"Name": "source_id", "Generated": false},
+        {"Name": "claim_type", "Generated": false},
+        {"Name": "claim_value", "Generated": false}
+      ],
+      "PrimaryKeyCols": ["id"]
+    },
+    "job_event": {
+      "Name": "job_event",
+      "Cols": [
+        {"Name": "id", "Generated": true},
+        {"Name": "job_id", "Generated": false},
+        {"Name": "timestamp", "Generated": false},
+        {"Name": "message", "Generated": false}
+      ],
+      "PrimaryKeyCols": ["id"]
+    },
+    "job_event_delivery": {
+      "Name": "job_event_delivery",
+      "Cols": [
+        {"Name": "job_id", "Generated": false},
+        {"Name": "event_id", "Generated": false},
+        {"Name": "delivery_pending", "Generated": false},
+        {"Name": "delivery_attempt_count", "Generated": false}
+      ],
+      "PrimaryKeyCols": ["job_id"]
+    }
+  },
+  "Relations": [
+    {
+      "FromTable": "entity",
+      "FromColumn": "job_id",
+      "ToTable": "job",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "entity_claim",
+      "FromColumn": "entity_id",
+      "ToTable": "entity",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "entity_claim",
+      "FromColumn": "source_id",
+      "ToTable": "source",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "source",
+      "FromColumn": "file_id",
+      "ToTable": "file",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "file_identifier",
+      "FromColumn": "file_id",
+      "ToTable": "file",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "job_event",
+      "FromColumn": "job_id",
+      "ToTable": "job",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "job_event_delivery",
+      "FromColumn": "job_id",
+      "ToTable": "job",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "job_event_delivery",
+      "FromColumn": "event_id",
+      "ToTable": "job_event",
+      "ToColumn": "id"
+    }
+  ]
+}

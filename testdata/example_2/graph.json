@@ -1,0 +1,191 @@
+{
+  "RootTbl": "job",
+  "Tables": {
+    "entity": {
+      "Name": "entity",
+      "ReferencesTbl": [
+        "job"
+      ],
+      "ReferencedByTbl": [
+        "entity_claim"
+      ],
+      "IncludeCols": [
+        "id",
+        "job_id",
+        "created_at",
+        "entity_type",
+        "name"
+      ]
+    },
+    "entity_claim": {
+      "Name": "entity_claim",
+      "ReferencesTbl": [
+        "entity",
+        "source"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "id",
+        "entity_id",
+        "source_id",
+        "claim_type",
+        "claim_value"
+      ]
+    },
+    "file": {
+      "Name": "file",
+      "ReferencesTbl": null,
+      "ReferencedByTbl": [
+        "file_identifier",
+        "source"
+      ],
+      "IncludeCols": [
+        "id",
+        "created_at",
+        "filename",
+        "mime_type"
+      ]
+    },
+    "file_identifier": {
+      "Name": "file_identifier",
+      "ReferencesTbl": [
+        "file"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "file_id",
+        "key",
+        "value"
+      ]
+    },
+    "job": {
+      "Name": "job",
+      "ReferencesTbl": null,
+      "ReferencedByTbl": [
+        "entity",
+        "job_event",
+        "job_event_delivery"
+      ],
+      "IncludeCols": [
+        "id",
+        "created_at",
+        "status",
+        "title"
+      ]
+    },
+    "job_event": {
+      "Name": "job_event",
+      "ReferencesTbl": [
+        "job"
+      ],
+      "ReferencedByTbl": [
+        "job_event_delivery"
+      ],
+      "IncludeCols": [
+        "job_id",
+        "timestamp",
+        "message"
+      ]
+    },
+    "job_event_delivery": {
+      "Name": "job_event_delivery",
+      "ReferencesTbl": [
+        "job",
+        "job_event"
+      ],
+      "ReferencedByTbl": null,
+      "IncludeCols": [
+        "job_id",
+        "event_id",
+        "delivery_pending",
+        "delivery_attempt_count"
+      ]
+    },
+    "source": {
+      "Name": "source",
+      "ReferencesTbl": [
+        "file"
+      ],
+      "ReferencedByTbl": [
+        "entity_claim"
+      ],
+      "IncludeCols": [
+        "id",
+        "file_id",
+        "title",
+        "url",
+        "accessed_at"
+      ]
+    }
+  },
+  "Relations": [
+    {
+      "FromTable": "entity",
+      "FromColumn": "job_id",
+      "ToTable": "job",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "entity_claim",
+      "FromColumn": "entity_id",
+      "ToTable": "entity",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "entity_claim",
+      "FromColumn": "source_id",
+      "ToTable": "source",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "source",
+      "FromColumn": "file_id",
+      "ToTable": "file",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "file_identifier",
+      "FromColumn": "file_id",
+      "ToTable": "file",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "job_event",
+      "FromColumn": "job_id",
+      "ToTable": "job",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "job_event_delivery",
+      "FromColumn": "job_id",
+      "ToTable": "job",
+      "ToColumn": "id"
+    },
+    {
+      "FromTable": "job_event_delivery",
+      "FromColumn": "event_id",
+      "ToTable": "job_event",
+      "ToColumn": "id"
+    }
+  ],
+  "ExportOrder": [
+    "job",
+    "entity",
+    "job_event",
+    "job_event_delivery",
+    "entity_claim",
+    "source",
+    "file",
+    "file_identifier"
+  ],
+  "ImportOrder": [
+    "file",
+    "job",
+    "entity",
+    "file_identifier",
+    "job_event",
+    "job_event_delivery",
+    "source",
+    "entity_claim"
+  ]
+}

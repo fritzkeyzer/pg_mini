@@ -45,10 +45,45 @@ func calculateExportOrder(tables map[string]*Table, startTable string) ([]string
 		queue = nextWave
 	}
 
-	// Phase 2: Add remaining tables (reachable only via References edges).
-	// These are upstream/lookup tables. A table is ready when all its FK targets
-	// are already processed (ignoring self-references), ensuring it can be
-	// properly filtered by the downstream data collected in phase 1.
+	// Phase 2a: BFS from Phase-1 boundary following ReferencesTbl upward.
+	// Tables referenced by Phase-1 tables are added first, then their parents, etc.
+	// This ensures that when we create a temp table for T, the temp tables used in
+	// T's filter already exist.
+	var phase2aQueue []string
+	for name := range tables {
+		if added[name] {
+			continue
+		}
+		for _, refBy := range tables[name].ReferencedByTbl {
+			if added[refBy] {
+				phase2aQueue = append(phase2aQueue, name)
+				break
+			}
+		}
+	}
+	slices.Sort(phase2aQueue)
+	for _, t := range phase2aQueue {
+		added[t] = true
+	}
+	result = append(result, phase2aQueue...)
+
+	for len(phase2aQueue) > 0 {
+		var nextWave []string
+		for _, tbl := range phase2aQueue {
+			for _, ref := range tables[tbl].ReferencesTbl {
+				if !added[ref] {
+					added[ref] = true
+					nextWave = append(nextWave, ref)
+				}
+			}
+		}
+		slices.Sort(nextWave)
+		result = append(result, nextWave...)
+		phase2aQueue = nextWave
+	}
+
+	// Phase 2b: Add remaining tables using topological sort by ReferencesTbl.
+	// These are tables not reachable from Phase 1 via the reverse-FK traversal above.
 	for len(result) < len(tables) {
 		var wave []string
 		for name, t := range tables {

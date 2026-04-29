@@ -1,0 +1,50 @@
+[
+  {
+    "Table": "job",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_job AS (SELECT id, created_at, status, title FROM job);",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_job (id);",
+    "CopyToCSV": "COPY tmp_mini_job TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "entity",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_entity AS (SELECT id, job_id, created_at, entity_type, name FROM entity WHERE (entity.job_id IN (SELECT id FROM tmp_mini_job)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_entity (id);",
+    "CopyToCSV": "COPY tmp_mini_entity TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "job_event",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_job_event AS (SELECT job_id, timestamp, message FROM job_event WHERE (job_event.job_id IN (SELECT id FROM tmp_mini_job)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_job_event (id);",
+    "CopyToCSV": "COPY tmp_mini_job_event TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "job_event_delivery",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_job_event_delivery AS (SELECT job_id, event_id, delivery_pending, delivery_attempt_count FROM job_event_delivery WHERE (job_event_delivery.event_id IN (SELECT id FROM tmp_mini_job_event)) OR (job_event_delivery.job_id IN (SELECT id FROM tmp_mini_job)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_job_event_delivery TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "entity_claim",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_entity_claim AS (SELECT id, entity_id, source_id, claim_type, claim_value FROM entity_claim WHERE (entity_claim.entity_id IN (SELECT id FROM tmp_mini_entity)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_entity_claim (source_id);",
+    "CopyToCSV": "COPY tmp_mini_entity_claim TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "source",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_source AS (SELECT id, file_id, title, url, accessed_at FROM source WHERE (source.id IN (SELECT source_id FROM tmp_mini_entity_claim)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_source (file_id);",
+    "CopyToCSV": "COPY tmp_mini_source TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "file",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_file AS (SELECT id, created_at, filename, mime_type FROM file WHERE (file.id IN (SELECT file_id FROM tmp_mini_source)));",
+    "CreateIndex": "CREATE INDEX ON tmp_mini_file (id);",
+    "CopyToCSV": "COPY tmp_mini_file TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  },
+  {
+    "Table": "file_identifier",
+    "CreateTmp": "CREATE TEMP TABLE tmp_mini_file_identifier AS (SELECT file_id, key, value FROM file_identifier WHERE (file_identifier.file_id IN (SELECT id FROM tmp_mini_file)));",
+    "CreateIndex": "",
+    "CopyToCSV": "COPY tmp_mini_file_identifier TO STDOUT WITH CSV HEADER DELIMITER ',';"
+  }
+]
