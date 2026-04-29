@@ -1,82 +1,155 @@
 [
   {
     "Table": "file",
+    "Columns": [
+      "id",
+      "created_at",
+      "filename",
+      "mime_type"
+    ],
     "Truncate": "TRUNCATE TABLE file CASCADE;",
     "Copy": "COPY file (id, created_at, filename, mime_type) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO file (id, created_at, filename, mime_type) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_file (LIKE file INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_file (id, created_at, filename, mime_type) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO file (id, created_at, filename, mime_type) SELECT id, created_at, filename, mime_type FROM tmp_import_file ON CONFLICT (id) DO UPDATE SET created_at = EXCLUDED.created_at, filename = EXCLUDED.filename, mime_type = EXCLUDED.mime_type;",
     "SoftInsert": "INSERT INTO file (id, created_at, filename, mime_type) SELECT id, created_at, filename, mime_type FROM tmp_import_file ON CONFLICT (id) DO NOTHING;",
+    "RowUpsert": "INSERT INTO file (id, created_at, filename, mime_type) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET created_at = EXCLUDED.created_at, filename = EXCLUDED.filename, mime_type = EXCLUDED.mime_type;",
+    "RowSoftInsert": "INSERT INTO file (id, created_at, filename, mime_type) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_file;"
   },
   {
     "Table": "job",
+    "Columns": [
+      "id",
+      "created_at",
+      "status",
+      "title"
+    ],
     "Truncate": "TRUNCATE TABLE job CASCADE;",
     "Copy": "COPY job (id, created_at, status, title) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO job (id, created_at, status, title) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_job (LIKE job INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_job (id, created_at, status, title) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO job (id, created_at, status, title) SELECT id, created_at, status, title FROM tmp_import_job ON CONFLICT (id) DO UPDATE SET created_at = EXCLUDED.created_at, status = EXCLUDED.status, title = EXCLUDED.title;",
     "SoftInsert": "INSERT INTO job (id, created_at, status, title) SELECT id, created_at, status, title FROM tmp_import_job ON CONFLICT (id) DO NOTHING;",
+    "RowUpsert": "INSERT INTO job (id, created_at, status, title) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET created_at = EXCLUDED.created_at, status = EXCLUDED.status, title = EXCLUDED.title;",
+    "RowSoftInsert": "INSERT INTO job (id, created_at, status, title) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_job;"
   },
   {
     "Table": "entity",
+    "Columns": [
+      "id",
+      "job_id",
+      "created_at",
+      "entity_type",
+      "name"
+    ],
     "Truncate": "TRUNCATE TABLE entity CASCADE;",
     "Copy": "COPY entity (id, job_id, created_at, entity_type, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO entity (id, job_id, created_at, entity_type, name) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_entity (LIKE entity INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_entity (id, job_id, created_at, entity_type, name) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO entity (id, job_id, created_at, entity_type, name) SELECT id, job_id, created_at, entity_type, name FROM tmp_import_entity ON CONFLICT (id) DO UPDATE SET job_id = EXCLUDED.job_id, created_at = EXCLUDED.created_at, entity_type = EXCLUDED.entity_type, name = EXCLUDED.name;",
     "SoftInsert": "INSERT INTO entity (id, job_id, created_at, entity_type, name) SELECT id, job_id, created_at, entity_type, name FROM tmp_import_entity ON CONFLICT (id) DO NOTHING;",
+    "RowUpsert": "INSERT INTO entity (id, job_id, created_at, entity_type, name) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET job_id = EXCLUDED.job_id, created_at = EXCLUDED.created_at, entity_type = EXCLUDED.entity_type, name = EXCLUDED.name;",
+    "RowSoftInsert": "INSERT INTO entity (id, job_id, created_at, entity_type, name) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_entity;"
   },
   {
     "Table": "file_identifier",
+    "Columns": [
+      "file_id",
+      "key",
+      "value"
+    ],
     "Truncate": "TRUNCATE TABLE file_identifier CASCADE;",
     "Copy": "COPY file_identifier (file_id, key, value) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO file_identifier (file_id, key, value) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_file_identifier (LIKE file_identifier INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_file_identifier (file_id, key, value) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "",
     "SoftInsert": "",
+    "RowUpsert": "",
+    "RowSoftInsert": "",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_file_identifier;"
   },
   {
     "Table": "job_event",
+    "Columns": [
+      "job_id",
+      "timestamp",
+      "message"
+    ],
     "Truncate": "TRUNCATE TABLE job_event CASCADE;",
     "Copy": "COPY job_event (job_id, timestamp, message) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO job_event (job_id, timestamp, message) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_job_event (LIKE job_event INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_job_event (job_id, timestamp, message) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO job_event (job_id, timestamp, message) SELECT job_id, timestamp, message FROM tmp_import_job_event ON CONFLICT (id) DO UPDATE SET job_id = EXCLUDED.job_id, timestamp = EXCLUDED.timestamp, message = EXCLUDED.message;",
     "SoftInsert": "INSERT INTO job_event (job_id, timestamp, message) SELECT job_id, timestamp, message FROM tmp_import_job_event ON CONFLICT (id) DO NOTHING;",
+    "RowUpsert": "INSERT INTO job_event (job_id, timestamp, message) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET job_id = EXCLUDED.job_id, timestamp = EXCLUDED.timestamp, message = EXCLUDED.message;",
+    "RowSoftInsert": "INSERT INTO job_event (job_id, timestamp, message) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_job_event;"
   },
   {
     "Table": "job_event_delivery",
+    "Columns": [
+      "job_id",
+      "event_id",
+      "delivery_pending",
+      "delivery_attempt_count"
+    ],
     "Truncate": "TRUNCATE TABLE job_event_delivery CASCADE;",
     "Copy": "COPY job_event_delivery (job_id, event_id, delivery_pending, delivery_attempt_count) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO job_event_delivery (job_id, event_id, delivery_pending, delivery_attempt_count) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_job_event_delivery (LIKE job_event_delivery INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_job_event_delivery (job_id, event_id, delivery_pending, delivery_attempt_count) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO job_event_delivery (job_id, event_id, delivery_pending, delivery_attempt_count) SELECT job_id, event_id, delivery_pending, delivery_attempt_count FROM tmp_import_job_event_delivery ON CONFLICT (job_id) DO UPDATE SET event_id = EXCLUDED.event_id, delivery_pending = EXCLUDED.delivery_pending, delivery_attempt_count = EXCLUDED.delivery_attempt_count;",
     "SoftInsert": "INSERT INTO job_event_delivery (job_id, event_id, delivery_pending, delivery_attempt_count) SELECT job_id, event_id, delivery_pending, delivery_attempt_count FROM tmp_import_job_event_delivery ON CONFLICT (job_id) DO NOTHING;",
+    "RowUpsert": "INSERT INTO job_event_delivery (job_id, event_id, delivery_pending, delivery_attempt_count) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4) ON CONFLICT (job_id) DO UPDATE SET event_id = EXCLUDED.event_id, delivery_pending = EXCLUDED.delivery_pending, delivery_attempt_count = EXCLUDED.delivery_attempt_count;",
+    "RowSoftInsert": "INSERT INTO job_event_delivery (job_id, event_id, delivery_pending, delivery_attempt_count) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4) ON CONFLICT (job_id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_job_event_delivery;"
   },
   {
     "Table": "source",
+    "Columns": [
+      "id",
+      "file_id",
+      "title",
+      "url",
+      "accessed_at"
+    ],
     "Truncate": "TRUNCATE TABLE source CASCADE;",
     "Copy": "COPY source (id, file_id, title, url, accessed_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO source (id, file_id, title, url, accessed_at) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_source (LIKE source INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_source (id, file_id, title, url, accessed_at) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO source (id, file_id, title, url, accessed_at) SELECT id, file_id, title, url, accessed_at FROM tmp_import_source ON CONFLICT (id) DO UPDATE SET file_id = EXCLUDED.file_id, title = EXCLUDED.title, url = EXCLUDED.url, accessed_at = EXCLUDED.accessed_at;",
     "SoftInsert": "INSERT INTO source (id, file_id, title, url, accessed_at) SELECT id, file_id, title, url, accessed_at FROM tmp_import_source ON CONFLICT (id) DO NOTHING;",
+    "RowUpsert": "INSERT INTO source (id, file_id, title, url, accessed_at) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET file_id = EXCLUDED.file_id, title = EXCLUDED.title, url = EXCLUDED.url, accessed_at = EXCLUDED.accessed_at;",
+    "RowSoftInsert": "INSERT INTO source (id, file_id, title, url, accessed_at) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_source;"
   },
   {
     "Table": "entity_claim",
+    "Columns": [
+      "id",
+      "entity_id",
+      "source_id",
+      "claim_type",
+      "claim_value"
+    ],
     "Truncate": "TRUNCATE TABLE entity_claim CASCADE;",
     "Copy": "COPY entity_claim (id, entity_id, source_id, claim_type, claim_value) FROM STDIN WITH CSV HEADER DELIMITER ',';",
+    "Insert": "INSERT INTO entity_claim (id, entity_id, source_id, claim_type, claim_value) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5);",
     "CreateTemp": "CREATE TEMP TABLE tmp_import_entity_claim (LIKE entity_claim INCLUDING ALL);",
     "CopyTemp": "COPY tmp_import_entity_claim (id, entity_id, source_id, claim_type, claim_value) FROM STDIN WITH CSV HEADER DELIMITER ',';",
     "Upsert": "INSERT INTO entity_claim (id, entity_id, source_id, claim_type, claim_value) SELECT id, entity_id, source_id, claim_type, claim_value FROM tmp_import_entity_claim ON CONFLICT (id) DO UPDATE SET entity_id = EXCLUDED.entity_id, source_id = EXCLUDED.source_id, claim_type = EXCLUDED.claim_type, claim_value = EXCLUDED.claim_value;",
     "SoftInsert": "INSERT INTO entity_claim (id, entity_id, source_id, claim_type, claim_value) SELECT id, entity_id, source_id, claim_type, claim_value FROM tmp_import_entity_claim ON CONFLICT (id) DO NOTHING;",
+    "RowUpsert": "INSERT INTO entity_claim (id, entity_id, source_id, claim_type, claim_value) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET entity_id = EXCLUDED.entity_id, source_id = EXCLUDED.source_id, claim_type = EXCLUDED.claim_type, claim_value = EXCLUDED.claim_value;",
+    "RowSoftInsert": "INSERT INTO entity_claim (id, entity_id, source_id, claim_type, claim_value) OVERRIDING SYSTEM VALUE VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING;",
     "DropTemp": "DROP TABLE IF EXISTS tmp_import_entity_claim;"
   }
 ]

@@ -12,11 +12,13 @@ import (
 )
 
 type Import struct {
-	DB        *pgx.Conn
-	RootTable string
-	Truncate  bool
+	DB         *pgx.Conn
+	RootTable  string
+	Truncate   bool
 	Upsert     bool
 	SoftInsert bool
+	SkipErrors bool
+	MaxErrors  int
 	OutDir     string
 
 	DryRun       bool
@@ -65,22 +67,8 @@ func (i *Import) Run(ctx context.Context) error {
 		return fmt.Errorf("save queries: %w", err)
 	}
 
-	// Validate upsert: all tables must have primary keys
-	if i.Upsert {
-		for _, tq := range queries {
-			if tq.Upsert == "" {
-				return fmt.Errorf("upsert requested but table %s has no primary key or unique constraint", tq.Table)
-			}
-		}
-	}
-
-	// Validate soft insert: all tables must have primary keys
-	if i.SoftInsert {
-		for _, tq := range queries {
-			if tq.SoftInsert == "" {
-				return fmt.Errorf("soft insert requested but table %s has no primary key or unique constraint", tq.Table)
-			}
-		}
+	if i.MaxErrors < -1 {
+		return fmt.Errorf("--max-errors must be -1 or >= 0")
 	}
 
 	if i.DryRun {
@@ -91,7 +79,23 @@ func (i *Import) Run(ctx context.Context) error {
 			if i.Truncate {
 				fmt.Println(tq.Truncate)
 			}
-			if i.Upsert {
+			if i.SkipErrors {
+				if i.Upsert {
+					if tq.RowUpsert != "" {
+						fmt.Println(tq.RowUpsert)
+					} else {
+						fmt.Println(tq.Insert)
+					}
+				} else if i.SoftInsert {
+					if tq.RowSoftInsert != "" {
+						fmt.Println(tq.RowSoftInsert)
+					} else {
+						fmt.Println(tq.Insert)
+					}
+				} else {
+					fmt.Println(tq.Insert)
+				}
+			} else if i.Upsert {
 				fmt.Println(tq.CreateTemp)
 				fmt.Println(tq.CopyTemp)
 				fmt.Println(tq.Upsert)
@@ -112,6 +116,8 @@ func (i *Import) Run(ctx context.Context) error {
 	}
 
 	slog.Info("Importing...")
+	tableStats := map[string]*rowImportRes{}
+	nullableColsByTable := map[string]map[string]bool{}
 
 	for _, tq := range queries {
 		if i.Truncate {
@@ -125,7 +131,68 @@ func (i *Import) Run(ctx context.Context) error {
 			}
 		}
 
-		if i.Upsert {
+		if i.SkipErrors {
+			nullableCols, ok := nullableColsByTable[tq.Table]
+			if !ok {
+				nullableCols, err = getNullableColumns(ctx, i.DB, tq.Table)
+				if err != nil {
+					return fmt.Errorf("load nullable columns for %s: %w", tq.Table, err)
+				}
+				nullableColsByTable[tq.Table] = nullableCols
+			}
+
+			mode := "insert"
+			query := tq.Insert
+			usedFallback := false
+
+			if i.Upsert {
+				if tq.RowUpsert != "" {
+					query = tq.RowUpsert
+					mode = "upsert"
+				} else {
+					usedFallback = true
+					slog.Info("No primary key or unique constraint for table, falling back to row inserts", "table", tq.Table)
+				}
+			} else if i.SoftInsert {
+				if tq.RowSoftInsert != "" {
+					query = tq.RowSoftInsert
+					mode = "soft-insert"
+				} else {
+					usedFallback = true
+					slog.Info("No primary key or unique constraint for table, falling back to row inserts", "table", tq.Table)
+				}
+			}
+
+			res, err := insertRowsFromCSV(
+				ctx,
+				i.DB,
+				tq.Table,
+				tq.Columns,
+				nullableCols,
+				query,
+				i.OutDir,
+				i.MaxErrors,
+				i.SoftInsert,
+			)
+			if err != nil {
+				return fmt.Errorf("row import for %s: %w", tq.Table, err)
+			}
+			res.Mode = mode
+			res.UsedFallback = usedFallback
+			tableStats[tq.Table] = res
+
+			if i.Verbose || i.NoAnimations {
+				slog.Info("Imported rows: "+tq.Table,
+					"mode", mode,
+					"processed", prettyCount(res.Processed),
+					"inserted", prettyCount(res.Inserted),
+					"skipped", prettyCount(res.Skipped),
+					"failed", prettyCount(res.Failed),
+					"duration", prettyDuration(res.Duration),
+					"file size", prettyFileSize(res.FileSize),
+				)
+			}
+		} else if i.Upsert {
 			// Create temp table
 			slog.Debug(tq.CreateTemp)
 			_, err := i.DB.Exec(ctx, tq.CreateTemp)
@@ -213,6 +280,42 @@ func (i *Import) Run(ctx context.Context) error {
 				)
 			}
 		}
+	}
+
+	if i.SkipErrors {
+		var totalProcessed int64
+		var totalInserted int64
+		var totalSkipped int64
+		var totalFailed int64
+
+		for _, tq := range queries {
+			res, ok := tableStats[tq.Table]
+			if !ok {
+				continue
+			}
+
+			totalProcessed += res.Processed
+			totalInserted += res.Inserted
+			totalSkipped += res.Skipped
+			totalFailed += res.Failed
+
+			slog.Info("Table import stats",
+				"table", tq.Table,
+				"mode", res.Mode,
+				"fallback", res.UsedFallback,
+				"processed", res.Processed,
+				"inserted", res.Inserted,
+				"skipped", res.Skipped,
+				"failed", res.Failed,
+			)
+		}
+
+		slog.Info("Import row stats",
+			"processed", totalProcessed,
+			"inserted", totalInserted,
+			"skipped", totalSkipped,
+			"failed", totalFailed,
+		)
 	}
 
 	slog.Info("Import complete", "duration", prettyDuration(time.Since(t0)))

@@ -40,7 +40,7 @@ func main() {
 	app := &cli.Command{
 		Name:    "pg_mini",
 		Usage:   "Create and restore consistent partial Postgres backups",
-		Version: "0.1.6",
+		Version: "0.2.0",
 		Commands: []*cli.Command{
 			{
 				Name: "export",
@@ -107,6 +107,8 @@ func main() {
 					&cli.BoolFlag{Name: "truncate", Usage: "truncate the target table before importing"},
 					&cli.BoolFlag{Name: "upsert", Usage: "use INSERT ... ON CONFLICT DO UPDATE instead of plain COPY (requires primary keys)"},
 					&cli.BoolFlag{Name: "soft-insert", Usage: "use INSERT ... ON CONFLICT DO NOTHING instead of plain COPY (requires primary keys)"},
+					&cli.BoolFlag{Name: "skip-errors", Usage: "import rows one-by-one, log row errors, and continue"},
+					&cli.IntFlag{Name: "max-errors", Value: -1, Usage: "maximum row errors before aborting (-1 means no limit)"},
 					&cli.StringFlag{Name: "out", Usage: "required, the directory to read the exported files from"},
 					&cli.BoolFlag{Name: "dry", Usage: "skip execution of queries"},
 					&verboseFlag,
@@ -123,6 +125,8 @@ func main() {
 					truncate := cmd.Bool("truncate")
 					upsert := cmd.Bool("upsert")
 					softInsert := cmd.Bool("soft-insert")
+					skipErrors := cmd.Bool("skip-errors")
+					maxErrors := cmd.Int("max-errors")
 
 					if connURI == "" {
 						return fmt.Errorf("must provide a connection string")
@@ -151,6 +155,8 @@ func main() {
 						Truncate:     truncate,
 						Upsert:       upsert,
 						SoftInsert:   softInsert,
+						SkipErrors:   skipErrors,
+						MaxErrors:    maxErrors,
 						OutDir:       outDir,
 						DryRun:       cmd.Bool("dry"),
 						Verbose:      cmd.Bool("verbose"),

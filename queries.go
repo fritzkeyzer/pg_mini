@@ -15,15 +15,19 @@ type ExportTableQueries struct {
 
 type ImportTableQueries struct {
 	Table    string
+	Columns  []string
 	Truncate string // TRUNCATE TABLE X CASCADE
 	Copy     string // COPY X FROM STDIN ...
+	Insert   string // INSERT INTO X (...) VALUES (...)
 
 	// Upsert mode: COPY into temp table, then INSERT ... ON CONFLICT
-	CreateTemp string // CREATE TEMP TABLE tmp_import_X (LIKE X INCLUDING ALL)
-	CopyTemp   string // COPY tmp_import_X FROM STDIN WITH CSV HEADER ...
-	Upsert     string // INSERT INTO X SELECT * FROM tmp ON CONFLICT (...) DO UPDATE SET ...
-	SoftInsert string // INSERT INTO X SELECT * FROM tmp ON CONFLICT (...) DO NOTHING
-	DropTemp   string // DROP TABLE IF EXISTS tmp_import_X
+	CreateTemp    string // CREATE TEMP TABLE tmp_import_X (LIKE X INCLUDING ALL)
+	CopyTemp      string // COPY tmp_import_X FROM STDIN WITH CSV HEADER ...
+	Upsert        string // INSERT INTO X SELECT * FROM tmp ON CONFLICT (...) DO UPDATE SET ...
+	SoftInsert    string // INSERT INTO X SELECT * FROM tmp ON CONFLICT (...) DO NOTHING
+	RowUpsert     string // INSERT INTO X (...) VALUES (...) ON CONFLICT (...) DO UPDATE SET ...
+	RowSoftInsert string // INSERT INTO X (...) VALUES (...) ON CONFLICT (...) DO NOTHING
+	DropTemp      string // DROP TABLE IF EXISTS tmp_import_X
 }
 
 func generateExportQueries(g *Graph, filter, raw string) []ExportTableQueries {
@@ -88,13 +92,20 @@ func generateImportQueries(g *Graph, schema *Schema) []ImportTableQueries {
 			}
 		}
 		colList := strings.Join(includeCols, ", ")
+		placeholders := make([]string, len(includeCols))
+		for idx := range includeCols {
+			placeholders[idx] = fmt.Sprintf("$%d", idx+1)
+		}
+		placeholderList := strings.Join(placeholders, ", ")
 
 		tmpName := "tmp_import_" + tbl
 
 		tq := ImportTableQueries{
 			Table:      tbl,
+			Columns:    includeCols,
 			Truncate:   fmt.Sprintf("TRUNCATE TABLE %s CASCADE;", tbl),
 			Copy:       fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tbl, colList),
+			Insert:     fmt.Sprintf("INSERT INTO %s (%s) OVERRIDING SYSTEM VALUE VALUES (%s);", tbl, colList, placeholderList),
 			CreateTemp: fmt.Sprintf("CREATE TEMP TABLE %s (LIKE %s INCLUDING ALL);", tmpName, tbl),
 			CopyTemp:   fmt.Sprintf("COPY %s (%s) FROM STDIN WITH CSV HEADER DELIMITER ',';", tmpName, colList),
 			DropTemp:   fmt.Sprintf("DROP TABLE IF EXISTS %s;", tmpName),
@@ -137,6 +148,16 @@ func generateImportQueries(g *Graph, schema *Schema) []ImportTableQueries {
 			tq.SoftInsert = fmt.Sprintf(
 				"INSERT INTO %s (%s) SELECT %s FROM %s ON CONFLICT (%s) DO NOTHING;",
 				tbl, colList, colList, tmpName, conflictColList,
+			)
+
+			tq.RowUpsert = fmt.Sprintf(
+				"INSERT INTO %s (%s) OVERRIDING SYSTEM VALUE VALUES (%s) ON CONFLICT (%s) %s;",
+				tbl, colList, placeholderList, conflictColList, doClause,
+			)
+
+			tq.RowSoftInsert = fmt.Sprintf(
+				"INSERT INTO %s (%s) OVERRIDING SYSTEM VALUE VALUES (%s) ON CONFLICT (%s) DO NOTHING;",
+				tbl, colList, placeholderList, conflictColList,
 			)
 		}
 

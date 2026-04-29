@@ -97,8 +97,12 @@ pg_mini import \
 | `--truncate`    | Truncates target tables (in reverse dependency order) before importing                                                                                                  |
 | `--upsert`      | Loads into temp tables, then `INSERT ... ON CONFLICT DO UPDATE` — merges data without deleting existing rows. Requires primary keys or unique constraints.              |
 | `--soft-insert` | Loads into temp tables, then `INSERT ... ON CONFLICT DO NOTHING` — inserts only new rows, skipping any that already exist. Requires primary keys or unique constraints. |
+| `--skip-errors` | Switches import to row-by-row inserts, logs row failures via `slog.Error(...)`, and continues importing remaining rows (best-effort partial import).                   |
+| `--max-errors`  | Used with `--skip-errors`; aborts once row failures exceed this limit. Default `-1` (no limit).                                                                        |
 
 `--truncate`, `--upsert`, and `--soft-insert` are mutually exclusive.
+
+With `--skip-errors`, imports run without an all-or-nothing transaction and report per-table counters (`processed`, `inserted`, `skipped`, `failed`) at the end.
 
 ## How it works
 
