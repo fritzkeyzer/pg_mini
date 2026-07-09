@@ -28,7 +28,7 @@ exp := pg_mini.Export{
 	DB:        conn,
 	RootTable: "product",
 	Filter:    "where country_code = 'DE' order by random() limit 10000",
-	Storage:   pg_mini.DirStorage("backup"),
+	Store:   pg_mini.DirStore("backup"),
 }
 if err := exp.Run(ctx); err != nil {
 	log.Fatal(err)
@@ -38,7 +38,7 @@ if err := exp.Run(ctx); err != nil {
 imp := pg_mini.Import{
 	DB:        otherConn,
 	RootTable: "product",
-	Storage:   pg_mini.DirStorage("backup"),
+	Store:   pg_mini.DirStore("backup"),
 }
 if err := imp.Run(ctx); err != nil {
 	log.Fatal(err)
@@ -53,7 +53,7 @@ type Export struct {
 	RootTable string    // required
 	Filter    string    // WHERE/ORDER BY/LIMIT clause applied to the root table
 	RawQuery  string    // full SELECT for the root table (alternative to Filter)
-	Storage   Storage   // required — where artifacts are written
+	Store   Store   // required — where artifacts are written
 
 	DryRun       bool // print generated SQL, execute nothing
 	GraphOnly    bool // write graph.json and stop
@@ -82,7 +82,7 @@ automatically to satisfy foreign keys.
 type Import struct {
 	DB        *pgx.Conn // required
 	RootTable string    // required
-	Storage   Storage   // required — where artifacts are read from
+	Store   Store   // required — where artifacts are read from
 
 	// Mode (mutually exclusive; default is plain COPY FROM):
 	Truncate   bool // truncate targets in reverse dependency order first
@@ -109,22 +109,22 @@ By default the import is a fast bulk `COPY FROM` that fails on any conflict.
 continue, reporting per-table counters (`processed`, `inserted`, `skipped`,
 `failed`) at the end — useful for best-effort partial imports.
 
-## Storage
+## Store
 
-`Storage` is required. Use the built-in `DirStorage` for the local filesystem,
+`Store` is required. Use the built-in `DirStore` for the local filesystem,
 or supply your own implementation to back an export/import with something else
 (S3, GCS, in-memory, …).
 
 ```go
-type Storage interface {
+type Store interface {
 	// Create opens name for writing, truncating any existing entry.
 	Create(name string) (io.WriteCloser, error)
 	// Open opens name for reading.
 	Open(name string) (io.ReadCloser, error)
 }
 
-// DirStorage is the built-in local-filesystem backend.
-func DirStorage(dir string) Storage
+// DirStore is the built-in local-filesystem backend.
+func DirStore(dir string) Store
 ```
 
 Names are simple relative keys such as `"schema.json"`, `"graph.json"`, the

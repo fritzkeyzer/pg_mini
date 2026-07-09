@@ -16,10 +16,10 @@ type Export struct {
 	Filter    string
 	RawQuery  string
 
-	// Storage is where the export artifacts (schema.json, *.csv, ...) are
-	// written. Required. Use DirStorage(dir) for the local filesystem, or
+	// Store is where the export artifacts (schema.json, *.csv, ...) are
+	// written. Required. Use DirStore(dir) for the local filesystem, or
 	// supply your own implementation (S3, GCS, in-memory, ...).
-	Storage Storage
+	Store Store
 
 	DryRun       bool
 	GraphOnly    bool
@@ -39,10 +39,10 @@ type Export struct {
 func (e *Export) Run(ctx context.Context) error {
 	t0 := time.Now()
 
-	if e.Storage == nil {
+	if e.Store == nil {
 		return fmt.Errorf("storage is required")
 	}
-	store := e.Storage
+	store := e.Store
 
 	// Runs queries to understand your database schema
 	schema, err := queryDBSchema(ctx, e.DB)

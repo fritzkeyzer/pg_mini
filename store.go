@@ -8,32 +8,28 @@ import (
 	"path/filepath"
 )
 
-// Storage is a minimal, FS-shaped abstraction over where pg_mini reads and
-// writes its export artifacts: schema.json, graph.json, the *_queries.json
-// files, and one <table>.csv per table. Names are simple relative keys such as
-// "schema.json" or "users.csv".
-//
-// Implement it to back exports/imports with something other than the local
-// filesystem (S3, GCS, in-memory, etc.). Export.Storage / Import.Storage are
-// required; use DirStorage(dir) for the original file-based behaviour.
-type Storage interface {
+// Store abstracts where pg_mini reads and writes its export artifacts
+// (schema.json, graph.json, *_queries.json, one <table>.csv per table). Names
+// are relative keys such as "schema.json" or "users.csv". Implement it to back
+// exports/imports with S3, GCS, in-memory, etc.; use DirStore for the local
+// filesystem.
+type Store interface {
 	// Create opens name for writing, truncating any existing entry.
 	Create(name string) (io.WriteCloser, error)
 	// Open opens name for reading.
 	Open(name string) (io.ReadCloser, error)
 }
 
-// DirStorage returns a Storage backed by a local directory. Nested names are
-// created as needed.
-func DirStorage(dir string) Storage {
-	return dirStorage{dir: dir}
+// DirStore returns a Store backed by a local directory.
+func DirStore(dir string) Store {
+	return dirStore{dir: dir}
 }
 
-type dirStorage struct {
+type dirStore struct {
 	dir string
 }
 
-func (d dirStorage) Create(name string) (io.WriteCloser, error) {
+func (d dirStore) Create(name string) (io.WriteCloser, error) {
 	p := filepath.Join(d.dir, name)
 	if err := os.MkdirAll(filepath.Dir(p), os.ModePerm); err != nil {
 		return nil, fmt.Errorf("create directory %s: %w", filepath.Dir(p), err)
@@ -41,14 +37,13 @@ func (d dirStorage) Create(name string) (io.WriteCloser, error) {
 	return os.Create(p)
 }
 
-func (d dirStorage) Open(name string) (io.ReadCloser, error) {
+func (d dirStore) Open(name string) (io.ReadCloser, error) {
 	return os.Open(filepath.Join(d.dir, name))
 }
 
-// saveJSON encodes v as indented JSON into the named storage entry. It closes
-// the writer exactly once and surfaces any close error, which matters for
-// backends that finalize the write on Close (e.g. an S3 upload).
-func saveJSON(s Storage, name string, v any) (err error) {
+// saveJSON encodes v as indented JSON into name, surfacing any Close error
+// (backends like S3 finalize the write on Close).
+func saveJSON(s Store, name string, v any) (err error) {
 	f, err := s.Create(name)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", name, err)
@@ -67,8 +62,8 @@ func saveJSON(s Storage, name string, v any) (err error) {
 	return nil
 }
 
-// loadJSON decodes the named storage entry into ptr.
-func loadJSON(s Storage, name string, ptr any) error {
+// loadJSON decodes name into ptr.
+func loadJSON(s Store, name string, ptr any) error {
 	f, err := s.Open(name)
 	if err != nil {
 		return fmt.Errorf("open %s: %w", name, err)
@@ -81,8 +76,7 @@ func loadJSON(s Storage, name string, ptr any) error {
 	return nil
 }
 
-// countingWriter tracks bytes written so callers can report sizes without
-// re-statting the underlying storage.
+// countingWriter tracks bytes written.
 type countingWriter struct {
 	w io.Writer
 	n int64

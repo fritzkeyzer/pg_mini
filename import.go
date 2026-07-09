@@ -19,10 +19,10 @@ type Import struct {
 	SkipErrors bool
 	MaxErrors  int
 
-	// Storage is where the export artifacts (schema.json, *.csv, ...) are read
-	// from. Required. Use DirStorage(dir) for the local filesystem, or supply
+	// Store is where the export artifacts (schema.json, *.csv, ...) are read
+	// from. Required. Use DirStore(dir) for the local filesystem, or supply
 	// your own implementation (S3, GCS, in-memory, ...).
-	Storage Storage
+	Store Store
 
 	DryRun       bool
 	GraphOnly    bool
@@ -38,10 +38,10 @@ type Import struct {
 func (i *Import) Run(ctx context.Context) error {
 	t0 := time.Now()
 
-	if i.Storage == nil {
+	if i.Store == nil {
 		return fmt.Errorf("storage is required")
 	}
-	store := i.Storage
+	store := i.Store
 
 	schema := &Schema{}
 	err := loadJSON(store, "schema.json", schema)

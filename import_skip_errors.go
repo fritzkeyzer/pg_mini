@@ -29,7 +29,7 @@ type rowImportRes struct {
 func insertRowsFromCSV(
 	ctx context.Context,
 	conn *pgx.Conn,
-	store Storage,
+	store Store,
 	tbl string,
 	cols []string,
 	nullableCols map[string]bool,

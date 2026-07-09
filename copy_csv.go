@@ -16,7 +16,7 @@ type copyOutRes struct {
 	FileSize int64
 }
 
-func copyToCSV(ctx context.Context, conn *pgx.Conn, store Storage, tbl, query string) (*copyOutRes, error) {
+func copyToCSV(ctx context.Context, conn *pgx.Conn, store Store, tbl, query string) (*copyOutRes, error) {
 	name := tbl + ".csv"
 	w, err := store.Create(name)
 	if err != nil {
@@ -65,7 +65,7 @@ type copyInRes struct {
 	FileSize int64
 }
 
-func copyFromCSV(ctx context.Context, conn *pgx.Conn, store Storage, tbl, query string) (*copyInRes, error) {
+func copyFromCSV(ctx context.Context, conn *pgx.Conn, store Store, tbl, query string) (*copyInRes, error) {
 	name := tbl + ".csv"
 	r, err := store.Open(name)
 	if err != nil {

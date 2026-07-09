@@ -8,23 +8,23 @@ import (
 	"testing"
 )
 
-// memStorage is an in-memory Storage, demonstrating that pg_mini can back
+// memStore is an in-memory Store, demonstrating that pg_mini can back
 // exports/imports with something other than the local filesystem. It is also
-// used by TestE2E_CustomStorage to prove the seam end-to-end.
-type memStorage struct {
+// used by TestE2E_CustomStore to prove the seam end-to-end.
+type memStore struct {
 	mu    sync.Mutex
 	files map[string][]byte
 }
 
-func newMemStorage() *memStorage {
-	return &memStorage{files: map[string][]byte{}}
+func newMemStore() *memStore {
+	return &memStore{files: map[string][]byte{}}
 }
 
-func (m *memStorage) Create(name string) (io.WriteCloser, error) {
+func (m *memStore) Create(name string) (io.WriteCloser, error) {
 	return &memWriter{store: m, name: name}, nil
 }
 
-func (m *memStorage) Open(name string) (io.ReadCloser, error) {
+func (m *memStore) Open(name string) (io.ReadCloser, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	data, ok := m.files[name]
@@ -35,7 +35,7 @@ func (m *memStorage) Open(name string) (io.ReadCloser, error) {
 }
 
 type memWriter struct {
-	store *memStorage
+	store *memStore
 	name  string
 	buf   bytes.Buffer
 }
@@ -51,10 +51,10 @@ func (w *memWriter) Close() error {
 
 type memNotExist struct{ name string }
 
-func (e *memNotExist) Error() string { return "memStorage: not found: " + e.name }
+func (e *memNotExist) Error() string { return "memStore: not found: " + e.name }
 
-func TestDirStorage_RoundTrip(t *testing.T) {
-	s := DirStorage(t.TempDir())
+func TestDirStore_RoundTrip(t *testing.T) {
+	s := DirStore(t.TempDir())
 
 	// Nested name exercises the MkdirAll path.
 	w, err := s.Create("nested/dir/data.csv")
@@ -82,14 +82,14 @@ func TestDirStorage_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestStorage_JSONRoundTrip(t *testing.T) {
+func TestStore_JSONRoundTrip(t *testing.T) {
 	type payload struct {
 		Name  string
 		Count int
 	}
 	want := payload{Name: "orders", Count: 42}
 
-	s := newMemStorage()
+	s := newMemStore()
 	if err := saveJSON(s, "meta.json", want); err != nil {
 		t.Fatalf("saveJSON: %v", err)
 	}
@@ -103,9 +103,9 @@ func TestStorage_JSONRoundTrip(t *testing.T) {
 	}
 }
 
-// TestE2E_CustomStorage runs a full export → import round-trip through an
-// in-memory Storage backend, with no artifacts ever touching the filesystem.
-func TestE2E_CustomStorage(t *testing.T) {
+// TestE2E_CustomStore runs a full export → import round-trip through an
+// in-memory Store backend, with no artifacts ever touching the filesystem.
+func TestE2E_CustomStore(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e test in short mode")
 	}
@@ -117,12 +117,12 @@ func TestE2E_CustomStorage(t *testing.T) {
 	execSQLFile(t, setupConn, "testdata/e2e/company/setup.sql")
 	original := snapshotDB(t, setupConn)
 
-	store := newMemStorage()
+	store := newMemStore()
 
 	exp := &Export{
 		DB:           connect(t, connStr),
 		RootTable:    "company",
-		Storage:      store,
+		Store:        store,
 		NoAnimations: true,
 	}
 	if err := exp.Run(ctx); err != nil {
@@ -140,7 +140,7 @@ func TestE2E_CustomStorage(t *testing.T) {
 		DB:           connect(t, connStr),
 		RootTable:    "company",
 		Truncate:     true,
-		Storage:      store,
+		Store:        store,
 		NoAnimations: true,
 	}
 	if err := imp.Run(ctx); err != nil {

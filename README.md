@@ -71,12 +71,12 @@ pg_mini import \
 conn, _ := pgx.Connect(ctx, connStr)
 
 exp := pg_mini.Export{
-DB:        conn,
-RootTable: "company",
-Storage:   pg_mini.DirStorage("backup"),
+    DB:        conn,
+    RootTable: "company",
+    Store:   pg_mini.DirStore("backup"),
 }
 if err := exp.Run(ctx); err != nil {
-// ...
+    // ...
 }
 ```
 
