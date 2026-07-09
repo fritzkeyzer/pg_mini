@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,31 +29,27 @@ type rowImportRes struct {
 func insertRowsFromCSV(
 	ctx context.Context,
 	conn *pgx.Conn,
+	store Storage,
 	tbl string,
 	cols []string,
 	nullableCols map[string]bool,
-	query,
-	dir string,
+	query string,
 	maxErrors int,
 	softInsert bool,
 ) (*rowImportRes, error) {
-	fileName := filepath.Join(dir, tbl+".csv")
-	file, err := os.Open(fileName)
+	name := tbl + ".csv"
+	file, err := store.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("opening csv file: %w", err)
 	}
 	defer file.Close()
 
-	fileStats, err := os.Stat(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("statting file: %w", err)
-	}
-
-	r := csv.NewReader(bufio.NewReaderSize(file, 1024*1024))
+	cr := &countingReader{r: file}
+	r := csv.NewReader(bufio.NewReaderSize(cr, 1024*1024))
 	header, err := r.Read()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			return &rowImportRes{FileName: fileName, FileSize: fileStats.Size()}, nil
+			return &rowImportRes{FileName: name, FileSize: cr.n}, nil
 		}
 		return nil, fmt.Errorf("reading csv header: %w", err)
 	}
@@ -75,8 +69,7 @@ func insertRowsFromCSV(
 	}
 
 	res := &rowImportRes{
-		FileName: fileName,
-		FileSize: fileStats.Size(),
+		FileName: name,
 	}
 
 	start := time.Now()
@@ -164,6 +157,7 @@ func insertRowsFromCSV(
 	}
 
 	res.Duration = time.Since(start)
+	res.FileSize = cr.n
 	return res, nil
 }
 

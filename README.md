@@ -4,8 +4,14 @@
 
 Create consistent, partial backups of PostgreSQL databases.
 
-Export a subset of rows from a root table and `pg_mini` automatically follows foreign key relationships to include all
-dependent data. Import it back with full referential integrity preserved.
+- Install the CLI with `brew` or `go install`
+- Or import the Go library `github.com/fritzkeyzer/pg_mini`
+
+## How it works
+
+Given a root table and a filter, pg_mini follows foreign key relationships to export only the rows you
+need — plus every row required to keep those references valid. Exports run in a single transaction and
+land as one CSV file per table. Import loads them back in dependency order.
 
 ## Why?
 
@@ -13,108 +19,68 @@ dependent data. Import it back with full referential integrity preserved.
 - **Fast** — only exports the rows you need, plus their dependencies
 - **Consistent** — exports run in a single transaction, so foreign keys are always satisfied
 - **Simple** — one command to export, one to import
+- **Debuggable** — one CSV file per table, is easy to grep
 
-## Install
+## CLI
 
-### Homebrew (macOS/Linux)
-
-```sh
-brew install fritzkeyzer/tap/pg_mini
-```
-
-### Go
+- Homebrew (macOS/Linux) `brew install fritzkeyzer/tap/pg_mini`
+- Go toolchain (cross platform) `go install github.com/fritzkeyzer/pg_mini/cmd/pg_mini@latest`
+- Or download a prebuilt binary from [Releases](https://github.com/fritzkeyzer/pg_mini/releases).
 
 ```sh
-go install github.com/fritzkeyzer/pg_mini/cmd/pg_mini@latest
-```
-
-### Binary
-
-Download a prebuilt binary from [Releases](https://github.com/fritzkeyzer/pg_mini/releases).
-
-## Export
-
-Pick a root table, optionally filter it, and `pg_mini` exports that table plus all related tables (via foreign keys) to
-CSV files.
-
-```sh
+# Export with random 10k German products
 pg_mini export \
   --conn="postgresql://user:pass@localhost:5432/mydb" \
   --table="product" \
   --filter="where country_code='DE' order by random() limit 10000" \
-  --out="backups/mini"
-```
+  --out="backups/mini/products_de_10k"
 
-### Filter options
 
-| Flag       | Description                                                                               |
-|------------|-------------------------------------------------------------------------------------------|
-| `--filter` | A SQL `WHERE` clause (and optional `ORDER BY` / `LIMIT`) appended to the root table query |
-| `--raw`    | A complete SQL query to use instead of `--filter` (mutually exclusive with `--filter`)    |
-
-Only the root table is filtered. All dependent tables are automatically included based on the foreign key relationships
-to the filtered root rows.
-
-### Dry run
-
-Use `--dry` to preview the generated SQL without executing anything:
-
-```sh
-pg_mini export --conn="..." --table="product" --filter="limit 100" --dry
-```
-
-### Example output
-
-```
-product (10k rows, 732kB, copy 521ms, csv 63ms)
-├── product_tag (121k rows, 3MB, copy 124ms, csv 320ms)
-├── user_saved (5k rows, 1MB, copy 33ms, csv 16ms)
-├── user_cart (0 rows, 118B, copy 1ms, csv 1ms)
-├── vendor (2k rows, 2MB, copy 39ms, csv 13ms)
-│   └── vendor_tag (17k rows, 381kB, copy 48ms, csv 43ms)
-└── website (10k rows, 4MB, copy 73ms, csv 43ms)
-    ├── website_tag (139k rows, 3MB, copy 144ms, csv 317ms)
-    ├── website_task (40k rows, 3MB, copy 127ms, csv 114ms)
-    └── website_url (11k rows, 483kB, copy 53ms, csv 31ms)
-```
-
-## Import
-
-Import a previously exported backup into a database:
-
-```sh
+# Import
 pg_mini import \
   --conn="postgresql://user:pass@localhost:5432/mydb" \
   --table="product" \
-  --out="backups/mini"
+  --out="backups/mini/products_de_10k"
 ```
+
+### Dry mode
+
+- Both `export` and `import` support `--dry` and `--graph-only`
+- `--dry` and `--graph-only` only execute introspection queries (strictly read-only)
+- `--dry` emits all the queries that it would have executed - via stdout
+- `--graph-only` saves the schema instropection result `graph.json`
 
 ### Import modes
 
-| Flag            | Behavior                                                                                                                                                                |
-|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| *(default)*     | `COPY FROM` — fast bulk insert, fails on conflicts                                                                                                                      |
-| `--truncate`    | Truncates target tables (in reverse dependency order) before importing                                                                                                  |
-| `--upsert`      | Loads into temp tables, then `INSERT ... ON CONFLICT DO UPDATE` — merges data without deleting existing rows. Requires primary keys or unique constraints.              |
-| `--soft-insert` | Loads into temp tables, then `INSERT ... ON CONFLICT DO NOTHING` — inserts only new rows, skipping any that already exist. Requires primary keys or unique constraints. |
-| `--skip-errors` | Switches import to row-by-row inserts, logs row failures via `slog.Error(...)`, and continues importing remaining rows (best-effort partial import).                   |
-| `--max-errors`  | Used with `--skip-errors`; aborts once row failures exceed this limit. Default `-1` (no limit).                                                                        |
+| Flag            | Behavior                                                                                             |
+|-----------------|------------------------------------------------------------------------------------------------------|
+| *(default)*     | `COPY FROM` — fast bulk insert, fails on conflicts                                                   |
+| `--truncate`    | Truncates target tables (in reverse dependency order) before importing                               |
+| `--upsert`      | Merges data, updating existing rows on conflict. Requires primary keys or unique constraints.        |
+| `--soft-insert` | Inserts only new rows, skipping any that already exist. Requires primary keys or unique constraints. |
+| `--skip-errors` | Best-effort partial import: inserts row-by-row, logs failures, and keeps going.                      |
+| `--max-errors`  | Used with `--skip-errors`; aborts once failures exceed this limit. Default `-1` (no limit).          |
 
 `--truncate`, `--upsert`, and `--soft-insert` are mutually exclusive.
 
-With `--skip-errors`, imports run without an all-or-nothing transaction and report per-table counters (`processed`, `inserted`, `skipped`, `failed`) at the end.
+## Embedded use
 
-## How it works
+`pg_mini` is also an importable Go package — the CLI is a thin wrapper around it.
 
-1. Queries the database to discover the schema (tables, columns, foreign keys, primary keys)
-2. Builds a dependency graph from foreign key relationships, including transitive dependencies
-3. Generates queries to copy data into temporary tables in the correct order — starting from the filtered root table and
-   following foreign keys so only referenced rows are included
-4. Executes all copy queries within a single transaction for consistency
-5. Exports the temporary tables to CSV using `COPY TO`
+```go
+conn, _ := pgx.Connect(ctx, connStr)
 
-On import, the process is reversed: CSV files are loaded back in dependency order using `COPY FROM` (or
-upserted/soft-inserted via temp tables).
+exp := pg_mini.Export{
+DB:        conn,
+RootTable: "company",
+Storage:   pg_mini.DirStorage("backup"),
+}
+if err := exp.Run(ctx); err != nil {
+// ...
+}
+```
+
+See [PACKAGE.md](./PACKAGE.md) for the full API, including custom storage backends (S3, GCS, in-memory, …).
 
 ## License
 

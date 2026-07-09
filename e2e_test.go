@@ -198,7 +198,7 @@ func TestE2E_RoundTrip(t *testing.T) {
 	exp := &Export{
 		DB:           exportConn,
 		RootTable:    "company",
-		OutDir:       outDir,
+		Storage:      DirStorage(outDir),
 		NoAnimations: true,
 	}
 	if err := exp.Run(ctx); err != nil {
@@ -223,7 +223,7 @@ func TestE2E_RoundTrip(t *testing.T) {
 		DB:           importConn,
 		RootTable:    "company",
 		Truncate:     true,
-		OutDir:       outDir,
+		Storage:      DirStorage(outDir),
 		NoAnimations: true,
 	}
 	if err := imp.Run(ctx); err != nil {
@@ -256,7 +256,7 @@ func TestE2E_Upsert(t *testing.T) {
 	exp := &Export{
 		DB:           exportConn,
 		RootTable:    "company",
-		OutDir:       outDir,
+		Storage:      DirStorage(outDir),
 		NoAnimations: true,
 	}
 	if err := exp.Run(ctx); err != nil {
@@ -289,7 +289,7 @@ func TestE2E_Upsert(t *testing.T) {
 		DB:           importConn,
 		RootTable:    "company",
 		Upsert:       true,
-		OutDir:       outDir,
+		Storage:      DirStorage(outDir),
 		NoAnimations: true,
 	}
 	if err := imp.Run(ctx); err != nil {
@@ -355,7 +355,7 @@ func TestE2E_Example2_TransitiveDeps(t *testing.T) {
 			DB:           exportConn,
 			RootTable:    "job",
 			Filter:       "WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001'",
-			OutDir:       outDir,
+			Storage:      DirStorage(outDir),
 			NoAnimations: true,
 		}
 		if err := exp.Run(ctx); err != nil {
@@ -416,7 +416,7 @@ func TestE2E_Example2_TransitiveDeps(t *testing.T) {
 			DB:           exportConn,
 			RootTable:    "job",
 			Filter:       "WHERE id = 'bbbbbbbb-0000-0000-0000-000000000002'",
-			OutDir:       outDir2,
+			Storage:      DirStorage(outDir2),
 			NoAnimations: true,
 		}
 		if err := exp.Run(ctx); err != nil {
@@ -480,7 +480,7 @@ func TestE2E_SoftInsert(t *testing.T) {
 	exp := &Export{
 		DB:           exportConn,
 		RootTable:    "company",
-		OutDir:       outDir,
+		Storage:      DirStorage(outDir),
 		NoAnimations: true,
 	}
 	if err := exp.Run(ctx); err != nil {
@@ -504,7 +504,7 @@ func TestE2E_SoftInsert(t *testing.T) {
 		DB:           importConn,
 		RootTable:    "company",
 		SoftInsert:   true,
-		OutDir:       outDir,
+		Storage:      DirStorage(outDir),
 		NoAnimations: true,
 	}
 	if err := imp.Run(ctx); err != nil {

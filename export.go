@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,9 +15,14 @@ type Export struct {
 	RootTable string
 	Filter    string
 	RawQuery  string
-	OutDir    string
+
+	// Storage is where the export artifacts (schema.json, *.csv, ...) are
+	// written. Required. Use DirStorage(dir) for the local filesystem, or
+	// supply your own implementation (S3, GCS, in-memory, ...).
+	Storage Storage
 
 	DryRun       bool
+	GraphOnly    bool
 	Verbose      bool
 	NoAnimations bool
 }
@@ -35,16 +39,16 @@ type Export struct {
 func (e *Export) Run(ctx context.Context) error {
 	t0 := time.Now()
 
+	if e.Storage == nil {
+		return fmt.Errorf("storage is required")
+	}
+	store := e.Storage
+
 	// Runs queries to understand your database schema
 	schema, err := queryDBSchema(ctx, e.DB)
 	if err != nil {
 		return fmt.Errorf("get schema: %w", err)
 	}
-	err = SaveAsJSONFile(schema, path.Join(e.OutDir, "schema.json"))
-	if err != nil {
-		return fmt.Errorf("save graph: %w", err)
-	}
-	slog.Debug("Extracted schema from database, saved to: schema.json")
 
 	// Build a dependency graph of tables based on foreign key relationships (including transitive dependencies!)
 	// Provided with a root table an execution sequence is calculated to traverse the tree
@@ -52,27 +56,15 @@ func (e *Export) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("build graph: %w", err)
 	}
-	err = SaveAsJSONFile(graph, path.Join(e.OutDir, "graph.json"))
-	if err != nil {
-		return fmt.Errorf("save graph: %w", err)
-	}
-	slog.Debug("Export graph calculated, saved to: graph.json")
-
-	graphPrinter := &GraphPrinter{
-		g: graph,
-	}
-	if !e.Verbose && !e.NoAnimations {
-		graphPrinter.Init(os.Stdout)
-		graphPrinter.Render()
-	} else {
-		graph.Print()
-	}
 
 	queries := generateExportQueries(graph, e.Filter, e.RawQuery)
 
-	err = SaveAsJSONFile(queries, path.Join(e.OutDir, "export_queries.json"))
-	if err != nil {
-		return fmt.Errorf("save queries: %w", err)
+	if e.GraphOnly {
+		if err := saveJSON(store, "graph.json", graph); err != nil {
+			return fmt.Errorf("save graph: %w", err)
+		}
+		slog.Info("Export graph saved to: graph.json")
+		return nil
 	}
 
 	if e.DryRun {
@@ -93,6 +85,30 @@ func (e *Export) Run(ctx context.Context) error {
 
 		slog.Info("Dry run complete")
 		return nil
+	}
+
+	if err := saveJSON(store, "schema.json", schema); err != nil {
+		return fmt.Errorf("save schema: %w", err)
+	}
+	slog.Debug("Extracted schema from database, saved to: schema.json")
+
+	if err := saveJSON(store, "graph.json", graph); err != nil {
+		return fmt.Errorf("save graph: %w", err)
+	}
+	slog.Debug("Export graph calculated, saved to: graph.json")
+
+	if err := saveJSON(store, "export_queries.json", queries); err != nil {
+		return fmt.Errorf("save queries: %w", err)
+	}
+
+	graphPrinter := &GraphPrinter{
+		g: graph,
+	}
+	if !e.Verbose && !e.NoAnimations {
+		graphPrinter.Init(os.Stdout)
+		graphPrinter.Render()
+	} else {
+		graph.Print()
 	}
 
 	// Execute temp copy queries in transaction for consistency
@@ -157,7 +173,7 @@ func (e *Export) Run(ctx context.Context) error {
 
 		slog.Debug(tq.CopyToCSV)
 
-		res, err := copyToCSV(ctx, e.DB, tq.Table, tq.CopyToCSV, e.OutDir)
+		res, err := copyToCSV(ctx, e.DB, store, tq.Table, tq.CopyToCSV)
 		if err != nil {
 			return fmt.Errorf("copy out files: %w", err)
 		}
@@ -177,7 +193,7 @@ func (e *Export) Run(ctx context.Context) error {
 		}
 	}
 
-	slog.Info("Export complete", "dir", e.OutDir, "total duration", prettyDuration(time.Since(t0)))
+	slog.Info("Export complete", "total duration", prettyDuration(time.Since(t0)))
 
 	return nil
 }

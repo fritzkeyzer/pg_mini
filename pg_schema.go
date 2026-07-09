@@ -2,10 +2,7 @@ package pg_mini
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -226,38 +223,4 @@ func getForeignKeys(ctx context.Context, conn *pgx.Conn) ([]foreignKeyRelation, 
 		relations = append(relations, rel)
 	}
 	return relations, nil
-}
-
-func FromJSONFile(file string, ptr any) error {
-	contents, err := os.ReadFile(file)
-	if err != nil {
-		return fmt.Errorf("read file: %v", err)
-	}
-
-	err = json.Unmarshal(contents, ptr)
-	if err != nil {
-		return fmt.Errorf("unmarshal: %v", err)
-	}
-	return nil
-}
-
-func SaveAsJSONFile(v any, file string) error {
-	err := os.MkdirAll(filepath.Dir(file), os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("create directory %s: %v", filepath.Dir(file), err)
-	}
-
-	f, err := os.Create(file)
-	if err != nil {
-		return fmt.Errorf("create file %s: %v", file, err)
-	}
-	defer f.Close()
-
-	enc := json.NewEncoder(f)
-	enc.SetIndent("", "  ")
-	err = enc.Encode(v)
-	if err != nil {
-		return fmt.Errorf("encode graph: %v", err)
-	}
-	return nil
 }

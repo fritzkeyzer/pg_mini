@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,9 +18,14 @@ type Import struct {
 	SoftInsert bool
 	SkipErrors bool
 	MaxErrors  int
-	OutDir     string
+
+	// Storage is where the export artifacts (schema.json, *.csv, ...) are read
+	// from. Required. Use DirStorage(dir) for the local filesystem, or supply
+	// your own implementation (S3, GCS, in-memory, ...).
+	Storage Storage
 
 	DryRun       bool
+	GraphOnly    bool
 	Verbose      bool
 	NoAnimations bool
 }
@@ -34,41 +38,35 @@ type Import struct {
 func (i *Import) Run(ctx context.Context) error {
 	t0 := time.Now()
 
-	schema := &Schema{}
-	err := FromJSONFile(path.Join(i.OutDir, "schema.json"), schema)
-	if err != nil {
-		return fmt.Errorf("load graph: %w", err)
+	if i.Storage == nil {
+		return fmt.Errorf("storage is required")
 	}
-	slog.Debug("Loaded schema from json, saved to: schema.json")
+	store := i.Storage
+
+	schema := &Schema{}
+	err := loadJSON(store, "schema.json", schema)
+	if err != nil {
+		return fmt.Errorf("load schema: %w", err)
+	}
+	slog.Debug("Loaded schema from json: schema.json")
 
 	graph, err := buildGraph(schema, i.RootTable)
 	if err != nil {
 		return fmt.Errorf("build graph: %w", err)
 	}
-	err = SaveAsJSONFile(graph, path.Join(i.OutDir, "graph.json"))
-	if err != nil {
-		return fmt.Errorf("save graph: %w", err)
-	}
-	slog.Debug("Import graph calculated, saved to: graph.json")
-
-	graphPrinter := &GraphPrinter{
-		g: graph,
-	}
-	if !i.Verbose && !i.NoAnimations {
-		graphPrinter.Init(os.Stdout)
-	} else {
-		graph.Print()
-	}
 
 	queries := generateImportQueries(graph, schema)
 
-	err = SaveAsJSONFile(queries, path.Join(i.OutDir, "import_queries.json"))
-	if err != nil {
-		return fmt.Errorf("save queries: %w", err)
-	}
-
 	if i.MaxErrors < -1 {
 		return fmt.Errorf("--max-errors must be -1 or >= 0")
+	}
+
+	if i.GraphOnly {
+		if err := saveJSON(store, "graph.json", graph); err != nil {
+			return fmt.Errorf("save graph: %w", err)
+		}
+		slog.Info("Import graph saved to: graph.json")
+		return nil
 	}
 
 	if i.DryRun {
@@ -113,6 +111,24 @@ func (i *Import) Run(ctx context.Context) error {
 
 		slog.Info("Dry run complete")
 		return nil
+	}
+
+	if err := saveJSON(store, "graph.json", graph); err != nil {
+		return fmt.Errorf("save graph: %w", err)
+	}
+	slog.Debug("Import graph calculated, saved to: graph.json")
+
+	if err := saveJSON(store, "import_queries.json", queries); err != nil {
+		return fmt.Errorf("save queries: %w", err)
+	}
+
+	graphPrinter := &GraphPrinter{
+		g: graph,
+	}
+	if !i.Verbose && !i.NoAnimations {
+		graphPrinter.Init(os.Stdout)
+	} else {
+		graph.Print()
 	}
 
 	slog.Info("Importing...")
@@ -166,11 +182,11 @@ func (i *Import) Run(ctx context.Context) error {
 			res, err := insertRowsFromCSV(
 				ctx,
 				i.DB,
+				store,
 				tq.Table,
 				tq.Columns,
 				nullableCols,
 				query,
-				i.OutDir,
 				i.MaxErrors,
 				i.SoftInsert,
 			)
@@ -202,7 +218,7 @@ func (i *Import) Run(ctx context.Context) error {
 
 			// COPY into temp table
 			slog.Debug(tq.CopyTemp)
-			res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.CopyTemp, i.OutDir)
+			res, err := copyFromCSV(ctx, i.DB, store, tq.Table, tq.CopyTemp)
 			if err != nil {
 				return fmt.Errorf("copy from csv into temp table: %w", err)
 			}
@@ -238,7 +254,7 @@ func (i *Import) Run(ctx context.Context) error {
 
 			// COPY into temp table
 			slog.Debug(tq.CopyTemp)
-			res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.CopyTemp, i.OutDir)
+			res, err := copyFromCSV(ctx, i.DB, store, tq.Table, tq.CopyTemp)
 			if err != nil {
 				return fmt.Errorf("copy from csv into temp table: %w", err)
 			}
@@ -267,7 +283,7 @@ func (i *Import) Run(ctx context.Context) error {
 		} else {
 			slog.Debug(tq.Copy)
 
-			res, err := copyFromCSV(ctx, i.DB, tq.Table, tq.Copy, i.OutDir)
+			res, err := copyFromCSV(ctx, i.DB, store, tq.Table, tq.Copy)
 			if err != nil {
 				return fmt.Errorf("copy from csv: %w", err)
 			}

@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,21 +16,21 @@ type copyOutRes struct {
 	FileSize int64
 }
 
-func copyToCSV(ctx context.Context, conn *pgx.Conn, tbl, query, dir string) (*copyOutRes, error) {
-	err := os.MkdirAll(dir, os.ModePerm)
-	if err != nil {
-		return nil, fmt.Errorf("could not create directory %s: %v", dir, err)
-	}
-
-	fileName := filepath.Join(dir, tbl+".csv")
-	file, err := os.Create(fileName)
+func copyToCSV(ctx context.Context, conn *pgx.Conn, store Storage, tbl, query string) (*copyOutRes, error) {
+	name := tbl + ".csv"
+	w, err := store.Create(name)
 	if err != nil {
 		return nil, fmt.Errorf("creating file: %w", err)
 	}
-	defer file.Close()
+	closed := false
+	defer func() {
+		if !closed {
+			w.Close()
+		}
+	}()
 
-	bufWriter := bufio.NewWriterSize(file, 1024*1024)
-	defer bufWriter.Flush()
+	cw := &countingWriter{w: w}
+	bufWriter := bufio.NewWriterSize(cw, 1024*1024)
 
 	queryStart := time.Now()
 	copyCount, err := conn.PgConn().CopyTo(ctx, bufWriter, query)
@@ -46,21 +44,17 @@ func copyToCSV(ctx context.Context, conn *pgx.Conn, tbl, query, dir string) (*co
 		return nil, fmt.Errorf("flushing data: %w", err)
 	}
 
-	err = file.Close()
+	closed = true
+	err = w.Close()
 	if err != nil {
 		return nil, fmt.Errorf("closing file: %w", err)
 	}
 
-	fileStats, err := os.Stat(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("statting file: %w", err)
-	}
-
 	return &copyOutRes{
-		FileName: fileName,
+		FileName: name,
 		Rows:     copyCount.RowsAffected(),
 		Duration: duration,
-		FileSize: fileStats.Size(),
+		FileSize: cw.n,
 	}, nil
 }
 
@@ -71,35 +65,38 @@ type copyInRes struct {
 	FileSize int64
 }
 
-func copyFromCSV(ctx context.Context, conn *pgx.Conn, tbl, query, dir string) (*copyInRes, error) {
-	fileName := filepath.Join(dir, tbl+".csv")
-	file, err := os.Open(fileName)
+func copyFromCSV(ctx context.Context, conn *pgx.Conn, store Storage, tbl, query string) (*copyInRes, error) {
+	name := tbl + ".csv"
+	r, err := store.Open(name)
 	if err != nil {
-		return nil, fmt.Errorf("creating file: %w", err)
+		return nil, fmt.Errorf("opening file: %w", err)
 	}
-	defer file.Close()
+	closed := false
+	defer func() {
+		if !closed {
+			r.Close()
+		}
+	}()
+
+	cr := &countingReader{r: r}
 
 	queryStart := time.Now()
-	copyCount, err := conn.PgConn().CopyFrom(ctx, file, query)
+	copyCount, err := conn.PgConn().CopyFrom(ctx, cr, query)
 	if err != nil {
 		return nil, fmt.Errorf("copying data: %w", err)
 	}
 	duration := time.Since(queryStart)
 
-	err = file.Close()
+	closed = true
+	err = r.Close()
 	if err != nil {
 		return nil, fmt.Errorf("closing file: %w", err)
 	}
 
-	fileStats, err := os.Stat(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("statting file: %w", err)
-	}
-
 	return &copyInRes{
-		FileName: fileName,
+		FileName: name,
 		Rows:     copyCount.RowsAffected(),
 		Duration: duration,
-		FileSize: fileStats.Size(),
+		FileSize: cr.n,
 	}, nil
 }
