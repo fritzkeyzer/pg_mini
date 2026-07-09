@@ -28,6 +28,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Push the tag with a PAT, not the default GITHUB_TOKEN. Tags pushed
+          # by GITHUB_TOKEN do NOT trigger other workflows (anti-recursion
+          # safeguard), so a PAT is what lets release.yml fire on the new tag.
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Read version
         id: version
