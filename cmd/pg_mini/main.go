@@ -4,16 +4,52 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/fritzkeyzer/pg_mini"
+	"github.com/fritzkeyzer/pg_mini/s3_store"
 	"github.com/jackc/pgx/v5"
 	"github.com/lmittmann/tint"
 	"github.com/urfave/cli/v3"
 )
+
+// s3Flags apply when --out is an s3:// URL. Credentials come from the
+// AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars or the IAM chain.
+var s3Flags = []cli.Flag{
+	&cli.StringFlag{Name: "s3-endpoint", Value: "s3.amazonaws.com", Usage: "S3 host, e.g. localhost:9000 for MinIO"},
+	&cli.StringFlag{Name: "s3-region", Usage: "S3 region (required by some endpoints)"},
+	&cli.BoolFlag{Name: "s3-insecure", Usage: "use plain HTTP instead of HTTPS (for local MinIO)"},
+}
+
+// buildStore selects the S3 backend for an s3://bucket/prefix URL, or a local
+// directory otherwise.
+func buildStore(ctx context.Context, out string, cmd *cli.Command) (pg_mini.Store, error) {
+	if !strings.HasPrefix(out, "s3://") {
+		return pg_mini.DirStore(out), nil
+	}
+	u, err := url.Parse(out)
+	if err != nil {
+		return nil, fmt.Errorf("invalid --out s3 url: %w", err)
+	}
+	bucket := u.Host
+	if bucket == "" {
+		return nil, fmt.Errorf("s3 url must include a bucket: s3://bucket/prefix")
+	}
+	return s3_store.New(ctx, s3_store.Config{
+		Endpoint:        cmd.String("s3-endpoint"),
+		Bucket:          bucket,
+		Prefix:          strings.Trim(u.Path, "/"),
+		Region:          cmd.String("s3-region"),
+		UseSSL:          !cmd.Bool("s3-insecure"),
+		AccessKeyID:     os.Getenv("PG_MINI_S3_KEY_ID"),
+		SecretAccessKey: os.Getenv("PG_MINI_S3_ACCESS_KEY"),
+	})
+}
 
 func main() {
 	sigChan := make(chan os.Signal, 1)
@@ -44,17 +80,17 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name: "export",
-				Flags: []cli.Flag{
+				Flags: append([]cli.Flag{
 					&cli.StringFlag{Name: "conn", Usage: "required, database connection string"},
 					&cli.StringFlag{Name: "table", Usage: "required, the top-level table you want to base this export on"},
 					&cli.StringFlag{Name: "filter", Usage: "optional where clause (raw sql)"},
 					&cli.StringFlag{Name: "raw", Usage: "use the raw query instead of the filter"},
-					&cli.StringFlag{Name: "out", Usage: "required, the directory to write the exported files to"},
+					&cli.StringFlag{Name: "out", Usage: "required, where to write the exported files: a directory or an s3://bucket/prefix URL"},
 					&cli.BoolFlag{Name: "dry", Usage: "skip execution of queries"},
 					&cli.BoolFlag{Name: "graph-only", Usage: "skip execution, only write graph.json"},
 					&verboseFlag,
 					&cli.BoolFlag{Name: "no-animations", Usage: "disables animations"},
-				},
+				}, s3Flags...),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					if cmd.Bool("verbose") {
 						logLevel.Set(slog.LevelDebug)
@@ -86,12 +122,17 @@ func main() {
 						return fmt.Errorf("connecting to database: %w", err)
 					}
 
+					store, err := buildStore(ctx, outDir, cmd)
+					if err != nil {
+						return err
+					}
+
 					export := &pg_mini.Export{
 						DB:           db,
 						RootTable:    rootTable,
 						Filter:       filter,
 						RawQuery:     rawQuery,
-						Store:        pg_mini.DirStore(outDir),
+						Store:        store,
 						DryRun:       dryRun,
 						GraphOnly:    cmd.Bool("graph-only"),
 						Verbose:      cmd.Bool("verbose"),
@@ -103,7 +144,7 @@ func main() {
 			},
 			{
 				Name: "import",
-				Flags: []cli.Flag{
+				Flags: append([]cli.Flag{
 					&cli.StringFlag{Name: "conn", Usage: "required, database connection string"},
 					&cli.StringFlag{Name: "table", Usage: "required, the top-level table used for the export"},
 					&cli.BoolFlag{Name: "truncate", Usage: "truncate the target table before importing"},
@@ -111,12 +152,12 @@ func main() {
 					&cli.BoolFlag{Name: "soft-insert", Usage: "use INSERT ... ON CONFLICT DO NOTHING instead of plain COPY (requires primary keys)"},
 					&cli.BoolFlag{Name: "skip-errors", Usage: "import rows one-by-one, log row errors, and continue"},
 					&cli.IntFlag{Name: "max-errors", Value: -1, Usage: "maximum row errors before aborting (-1 means no limit)"},
-					&cli.StringFlag{Name: "out", Usage: "required, the directory to read the exported files from"},
+					&cli.StringFlag{Name: "out", Usage: "required, where to read the exported files from: a directory or an s3://bucket/prefix URL"},
 					&cli.BoolFlag{Name: "dry", Usage: "skip execution of queries"},
 					&cli.BoolFlag{Name: "graph-only", Usage: "skip execution, only write graph.json"},
 					&verboseFlag,
 					&cli.BoolFlag{Name: "no-animations", Usage: "disables animations"},
-				},
+				}, s3Flags...),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					if cmd.Bool("verbose") {
 						logLevel.Set(slog.LevelDebug)
@@ -152,6 +193,11 @@ func main() {
 						return fmt.Errorf("connecting to database: %w", err)
 					}
 
+					store, err := buildStore(ctx, outDir, cmd)
+					if err != nil {
+						return err
+					}
+
 					importCmd := &pg_mini.Import{
 						DB:           db,
 						RootTable:    cmd.String("table"),
@@ -160,7 +206,7 @@ func main() {
 						SoftInsert:   softInsert,
 						SkipErrors:   skipErrors,
 						MaxErrors:    maxErrors,
-						Store:        pg_mini.DirStore(outDir),
+						Store:        store,
 						DryRun:       cmd.Bool("dry"),
 						GraphOnly:    cmd.Bool("graph-only"),
 						Verbose:      cmd.Bool("verbose"),

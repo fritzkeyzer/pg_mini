@@ -43,6 +43,26 @@ pg_mini import \
   --out="backups/mini/products_de_10k"
 ```
 
+### S3 compatible storage
+
+`--out` also accepts an `s3://bucket/prefix` URL (AWS S3, MinIO, R2, B2, etc.) for
+both `export` and `import`. The bucket must already exist. Credentials come from
+`PG_MINI_S3_KEY_ID` / `PG_MINI_S3_ACCESS_KEY`, falling back to the IAM chain.
+
+| Flag            | Behavior                                                    |
+|-----------------|-------------------------------------------------------------|
+| `--s3-endpoint` | S3 host (default `s3.amazonaws.com`; e.g. `localhost:9000`) |
+| `--s3-region`   | Region, required by some endpoints                          |
+| `--s3-insecure` | Use plain HTTP instead of HTTPS (e.g. local MinIO)          |
+
+```sh
+export PG_MINI_S3_KEY_ID=... 
+export PG_MINI_S3_ACCESS_KEY=...
+
+pg_mini export --conn="postgres://..." --table=products \
+  --out="s3://my-bucket/backups/products" --s3-region=us-east-1
+```
+
 ### Dry mode
 
 - Both `export` and `import` support `--dry` and `--graph-only`
