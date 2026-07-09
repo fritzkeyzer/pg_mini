@@ -1,0 +1,48 @@
+# Tags commits on 'main' whenever version.json changes.
+#
+# Dev flow: bump the version in version.json, commit, and push to main.
+# This workflow reads the version, creates the matching git tag, and pushes it.
+# Pushing the tag triggers release.yml (GoReleaser) to build and publish.
+
+name: Tag release on main
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - version.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-tag-main
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        run: echo "version=$(jq -r '.version' version.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "Tag $VERSION already exists, nothing to do."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
